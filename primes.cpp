@@ -1,4 +1,5 @@
 #include "CS207/Util.hpp"
+#include "math.h"
 
 /** Return true iff @a n is prime.
  * @pre @a n >= 0
@@ -6,7 +7,9 @@
 bool is_prime(int n)
 {
   assert(n >= 0);
-  for (int i = n-1; i > 1; --i)
+  int n_sqrt;
+  n_sqrt = (int) floor(sqrt(n));
+  for (int i = n_sqrt; i > 1; --i)
     if (n % i == 0)
       return false;
   return true;
