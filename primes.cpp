@@ -8,11 +8,29 @@ bool is_prime(int n)
 {
   assert(n >= 0);
   int n_sqrt;
-  n_sqrt = (int) floor(sqrt(n));
+  static std::vector<int> primes;
+  n_sqrt = (int) (sqrt(n)+0.5);
+  /*
   for (int i = n_sqrt; i > 1; --i)
     if (n % i == 0)
       return false;
+  */
+  if (n > 2){
+  int i = 0;
+  while (i < primes.size() && primes[i] <= n_sqrt){
+    if (n % primes[i] == 0)
+      return false;
+    i++;
+    }
+  if (n > primes.back())
+    primes.push_back(n);
   return true;
+  }
+  else{
+  if (primes.size() == 0)
+    primes.push_back(2);
+  return true;
+  }
 }
 
 int main()
