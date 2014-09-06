@@ -3,6 +3,8 @@
 
 /** Return true iff @a n is prime.
  * @pre @a n >= 0
+ * @pre only work when numbers are cheked
+ *      in a consecutive, ascending order
  */
 bool is_prime(int n)
 {
