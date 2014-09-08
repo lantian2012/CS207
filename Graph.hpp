@@ -27,6 +27,12 @@ class Graph {
   // later in the Graph's definition.
   // (As with all the "YOUR CODE HERE" markings, you may not actually NEED
   // code here. Just use the space if you need it.)
+  
+  struct internal_node;  //for store nodes in graph
+  class internal_edge;   //for store edges in graph
+  
+  
+  
 
  public:
 
@@ -59,6 +65,8 @@ class Graph {
   /** Construct an empty graph. */
   Graph() {
     // HW0: YOUR CODE HERE
+    size_ = 0;
+    
   }
   /** Default destructor */
   ~Graph() = default;
@@ -73,7 +81,7 @@ class Graph {
    */
   size_type size() const {
     // HW0: YOUR CODE HERE
-    return 0;
+    return size_;
   }
 
   /** Remove all nodes and edges from this graph.
@@ -83,6 +91,9 @@ class Graph {
    */
   void clear() {
     // HW0: YOUR CODE HERE
+    nodes.clear();
+    edges.clear();
+    size_ = 0;
   }
 
   /////////////////
@@ -118,13 +129,13 @@ class Graph {
     /** Return this node's position. */
     const Point& position() const {
       // HW0: YOUR CODE HERE
-      return Point();
+      return fetch().point;
     }
 
     /** Return this node's index, a number in the range [0, graph_size). */
     size_type index() const {
       // HW0: YOUR CODE HERE
-      return size_type(-1);
+      return idx_;
     }
 
     /** Test whether this node and @a x are equal.
@@ -133,7 +144,9 @@ class Graph {
      */
     bool operator==(const Node& x) const {
       // HW0: YOUR CODE HERE
-      (void) x;          // Quiet compiler warning
+      if (x.graph_ == graph_ && x.idx_ == idx_)
+        return true;
+      //(void) x;          // Quiet compiler warning
       return false;
     }
 
@@ -147,8 +160,8 @@ class Graph {
      */
     bool operator<(const Node& x) const {
       // HW0: YOUR CODE HERE
-      (void) x;           // Quiet compiler warning
-      return false;
+      //(void) x;           // Quiet compiler warning
+      return (idx_ < x.idx_);
     }
 
    private:
@@ -158,6 +171,19 @@ class Graph {
     // Use this space to declare private data members and methods for Node
     // that will not be visible to users, but may be useful within Graph.
     // i.e. Graph needs a way to construct valid Node objects
+    graph_type* graph_;
+    size_type idx_;
+    Node(const graph_type* graph, size_type idx)
+      : graph_(const_cast<graph_type*>(graph)), idx_(idx){
+      }
+    /**
+     Fetch internal node stored in graph
+     */
+    internal_node& fetch() const {
+      if (idx_ >= graph_->size())
+        assert(false);
+      return graph_->nodes[idx_];
+    }
   };
 
   /** Synonym for size(). */
@@ -174,8 +200,13 @@ class Graph {
    */
   Node add_node(const Point& position) {
     // HW0: YOUR CODE HERE
-    (void) position;      // Quiet compiler warning
-    return Node();        // Invalid node
+    internal_node new_node;
+    new_node.idx = size_;
+    new_node.point = position;
+    nodes.push_back(new_node);
+    size_ ++;
+    //(void) position;      // Quiet compiler warning
+    return Node(this, size_-1);        // Invalid node
   }
 
   /** Return the node with index @a i.
@@ -186,8 +217,8 @@ class Graph {
    */
   Node node(size_type i) const {
     // HW0: YOUR CODE HERE
-    (void) i;             // Quiet compiler warning
-    return Node();        // Invalid node
+    //(void) i;             // Quiet compiler warning
+    return Node(this, i);        // Invalid node
   }
 
   /////////////////
@@ -210,13 +241,16 @@ class Graph {
     /** Return a node of this Edge */
     Node node1() const {
       // HW0: YOUR CODE HERE
-      return Node();      // Invalid Node
+      // fetch the node index stored in the graph first
+      // then fetch the node from graph
+      return graph_->node(graph_->edges[idx_].node1);      
+       
     }
 
     /** Return the other node of this Edge */
     Node node2() const {
       // HW0: YOUR CODE HERE
-      return Node();      // Invalid Node
+      return graph_->node(graph_->edges[idx_].node2);
     }
 
     /** Test whether this edge and @a x are equal.
@@ -225,7 +259,9 @@ class Graph {
      */
     bool operator==(const Edge& x) const {
       // HW0: YOUR CODE HERE
-      (void) x;          // Quiet compiler warning
+      //(void) x;          // Quiet compiler warning
+      if (graph_ == x.graph_ && idx_ == x.idx_)
+        return true;
       return false;
     }
 
@@ -239,8 +275,8 @@ class Graph {
      */
     bool operator<(const Edge& x) const {
       // HW0: YOUR CODE HERE
-      (void) x;           // Quiet compiler warning
-      return false;
+      //(void) x;           // Quiet compiler warning
+      return (idx_ < x.idx_);
     }
 
    private:
@@ -250,6 +286,13 @@ class Graph {
     // Use this space to declare private data members and methods for Edge
     // that will not be visible to users, but may be useful within Graph.
     // i.e. Graph needs a way to construct valid Edge objects
+    graph_type* graph_;
+    size_type idx_;
+
+    Edge(const graph_type* graph, size_type idx)
+      : graph_(const_cast<graph_type*>(graph)), idx_(idx){
+      }
+
   };
 
   /** Return the total number of edges in the graph.
@@ -258,7 +301,20 @@ class Graph {
    */
   size_type num_edges() const {
     // HW0: YOUR CODE HERE
-    return 0;
+    return edges.size();
+  }
+  /** Check if an edge exists in the graph
+   * @pre @a a and @a b are distinct valid nodes of this graph
+   * @return a bool value. True if the edge exists.
+   */
+  bool has_edge(const Node& node1, const Node& node2) const{
+    internal_edge check_edge;
+    check_edge.node1 = node1.index();
+    check_edge.node2 = node2.index();
+    auto it = std::find(edges.begin(), edges.end(), check_edge);
+    if (it == edges.end())
+      return false;
+    return true;
   }
 
   /** Add an edge to the graph, or return the current edge if it already exists.
@@ -275,8 +331,20 @@ class Graph {
    */
   Edge add_edge(const Node& a, const Node& b) {
     // HW0: YOUR CODE HERE
-    (void) a, (void) b;   // Quiet compiler warning
-    return Edge();        // Invalid Edge
+    //(void) a, (void) b;   // Quiet compiler warning
+    internal_edge new_edge;
+    new_edge.node1 = a.index();
+    new_edge.node2 = b.index();
+    auto it = std::find(edges.begin(), edges.end(), new_edge);
+    if (it == edges.end())
+    {
+      new_edge.idx = edges.size();
+      edges.push_back(new_edge);
+      return Edge(this, new_edge.idx);
+    }
+    else{
+      return Edge(this, (*it).idx);
+    }
   }
 
   /** Return the edge with index @a i.
@@ -286,8 +354,9 @@ class Graph {
    */
   Edge edge(size_type i) const {
     // HW0: YOUR CODE HERE
-    (void) i;             // Quiet compiler warning
-    return Edge();        // Invalid Edge
+    //(void) i;             // Quiet compiler warning
+    
+    return Edge(this, i);        // Invalid Edge
   }
 
  private:
@@ -295,6 +364,27 @@ class Graph {
   // HW0: YOUR CODE HERE
   // Use this space for your Graph class's internals:
   //   helper functions, data members, and so forth.
+  
+  struct internal_node {
+    Point point;
+    size_type idx;
+  };
+
+  class internal_edge{
+   public:
+    size_type node1;
+    size_type node2;
+    size_type idx;
+    bool operator==(const internal_edge& x) const {
+      if ((node1 == x.node1 && node2 == x.node2) || (node1 == x.node2 && node2 == x. node1))
+        return true;
+      return false;
+    }
+  };
+  
+  std::vector<internal_node> nodes;  //store node information in graph
+  std::vector<internal_edge> edges;  //store edge information in graph
+  size_type size_;
 
 };
 

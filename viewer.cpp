@@ -58,9 +58,8 @@ int main(int argc, char** argv)
   viewer.launch();
 
   // Set the viewer
-  viewer.draw_graph_nodes(graph);
-  //viewer.draw_graph(graph);
+  //viewer.draw_graph_nodes(graph);
+  viewer.draw_graph(graph);
   viewer.center_view();
-
   return 0;
 }
