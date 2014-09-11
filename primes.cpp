@@ -3,8 +3,7 @@
 
 /** Return true iff @a n is prime.
  * @pre @a n >= 0
- * @pre only work when numbers are cheked
- *      in a consecutive, ascending order
+ * @pre For all i, 0 <= i < n, is_prime(i) has been previously called.
  */
 bool is_prime(int n)
 {
@@ -12,11 +11,8 @@ bool is_prime(int n)
   int n_sqrt;
   static std::vector<int> primes;
   n_sqrt = (int) (sqrt(n)+0.5);
-  /*
-  for (int i = n_sqrt; i > 1; --i)
-    if (n % i == 0)
-      return false;
-  */
+  if (n < 2)
+    return false;
   if (n > 2){
   int i = 0;
   while (i < primes.size() && primes[i] <= n_sqrt){
@@ -24,10 +20,12 @@ bool is_prime(int n)
       return false;
     i++;
     }
+  //only store the prime if it is not previously stored
   if (n > primes.back())
     primes.push_back(n);
   return true;
   }
+  //a special case where n==2
   else{
   if (primes.size() == 0)
     primes.push_back(2);
