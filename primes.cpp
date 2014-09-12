@@ -1,35 +1,39 @@
 #include "CS207/Util.hpp"
 #include "math.h"
+#include <set>
 
 /** Return true iff @a n is prime.
  * @pre @a n >= 0
- * @pre For all i, 0 <= i < n, is_prime(i) has been previously called.
  */
 bool is_prime(int n)
 {
   assert(n >= 0);
   int n_sqrt;
-  static std::vector<int> primes;
+  static std::set<int> primes;
   n_sqrt = (int) (sqrt(n)+0.5);
   if (n < 2)
     return false;
   if (n > 2){
-  int i = 0;
-  while (i < primes.size() && primes[i] <= n_sqrt){
-    if (n % primes[i] == 0)
-      return false;
-    i++;
+    //check if n is in the prime table
+    std::set<int>::iterator it;
+    it = primes.find(n);
+    if (primes.size() != 0 && it != primes.end())
+      return true;
+    //if n is not in the prime table, check every number
+    int i = 2;
+    while (i <= n_sqrt){
+      if (n % i == 0)
+        return false;
+      i++;
     }
-  //only store the prime if it is not previously stored
-  if (n > primes.back())
-    primes.push_back(n);
-  return true;
+    //store the prime 
+    primes.insert(n);
+    return true;
   }
   //a special case where n==2
   else{
-  if (primes.size() == 0)
-    primes.push_back(2);
-  return true;
+    primes.insert(n);
+    return true;
   }
 }
 
