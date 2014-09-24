@@ -58,6 +58,21 @@ class Graph {
       Graph::num_edges(), and argument type of Graph::node(size_type) */
   typedef unsigned size_type;
 
+  /** Type of node iterators, which iterate over all graph nodes. */
+  class NodeIterator;
+  /** Synonym for NodeIterator */
+  typedef NodeIterator node_iterator;
+
+  /** Type of edge iterators, which iterate over all graph edges. */
+  class EdgeIterator;
+  /** Synonym for EdgeIterator */
+  typedef EdgeIterator edge_iterator;
+
+  /** Type of incident iterators, which iterate incident edges to a node. */
+  class IncidentIterator;
+  /** Synonym for IncidentIterator */
+  typedef IncidentIterator incident_iterator;
+
   ////////////////////////////////
   // CONSTRUCTOR AND DESTRUCTOR //
   ////////////////////////////////
@@ -163,6 +178,14 @@ class Graph {
       return (idx_ < x.idx_);
     }
 
+    // HW1: YOUR CODE HERE
+    // Supply definitions AND SPECIFICATIONS for:
+    // node_value_type& value();
+    // const node_value_type& value() const;
+    // size_type degree() const;
+    // incident_iterator edge_begin() const;
+    // incident_iterator edge_end() const;
+
    private:
     // Allow Graph to access Node's private member data and functions.
     friend class Graph;
@@ -206,6 +229,17 @@ class Graph {
     nodes.push_back(new_node);
     size_ ++;
     return Node(this, size_-1); 
+  }
+
+  /** Determine if this Node belongs to this Graph
+   * @return True if @a n is currently a Node of this Graph
+   *
+   * Complexity: O(1).
+   */
+  bool has_node(const Node& n) const {
+    // HW1: YOUR CODE HERE
+    (void) n;            // Quiet compiler warning
+    return false;
   }
 
   /** Return the node with index @a i.
@@ -351,6 +385,18 @@ class Graph {
     }
   }
 
+  /** Test whether two nodes are connected by an edge.
+   * @pre @a a and @a b are valid nodes of this graph
+   * @return true if, for some @a i, edge(@a i) connects @a a and @a b.
+   *
+   * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
+   */
+  bool has_edge(const Node& a, const Node& b) const {
+    // HW1: YOUR CODE HERE
+    (void) a; (void) b;   // Quiet compiler warning
+    return false;
+  }
+
   /** Return the edge with index @a i.
    * @pre 0 <= @a i < num_edges()
    *
@@ -360,6 +406,114 @@ class Graph {
     // HW0: YOUR CODE HERE
     return Edge(this, i);
   }
+
+  ///////////////
+  // Iterators //
+  ///////////////
+
+  /** @class Graph::NodeIterator
+   * @brief Iterator class for nodes. A forward iterator. */
+  class NodeIterator {
+   public:
+    // These type definitions help us use STL's iterator_traits.
+    /** Element type. */
+    typedef Node value_type;
+    /** Type of pointers to elements. */
+    typedef Node* pointer;
+    /** Type of references to elements. */
+    typedef Node& reference;
+    /** Iterator category. */
+    typedef std::input_iterator_tag iterator_category;
+    /** Difference between iterators */
+    typedef std::ptrdiff_t difference_type;
+
+    /** Construct an invalid NodeIterator. */
+    NodeIterator() {
+    }
+
+    // HW1 #2: YOUR CODE HERE
+    // Supply definitions AND SPECIFICATIONS for:
+    // Node operator*() const
+    // NodeIterator& operator++()
+    // bool operator==(const NodeIterator&) const
+
+   private:
+    friend class Graph;
+    // HW1 #2: YOUR CODE HERE
+  };
+
+  // HW1 #2: YOUR CODE HERE
+  // Supply definitions AND SPECIFICATIONS for:
+  // node_iterator node_begin() const
+  // node_iterator node_end() const
+
+  /** @class Graph::EdgeIterator
+   * @brief Iterator class for edges. A forward iterator. */
+  class EdgeIterator {
+   public:
+    // These type definitions help us use STL's iterator_traits.
+    /** Element type. */
+    typedef Edge value_type;
+    /** Type of pointers to elements. */
+    typedef Edge* pointer;
+    /** Type of references to elements. */
+    typedef Edge& reference;
+    /** Iterator category. */
+    typedef std::input_iterator_tag iterator_category;
+    /** Difference between iterators */
+    typedef std::ptrdiff_t difference_type;
+
+    /** Construct an invalid EdgeIterator. */
+    EdgeIterator() {
+    }
+
+    // HW1 #3: YOUR CODE HERE
+    // Supply definitions AND SPECIFICATIONS for:
+    // Edge operator*() const
+    // EdgeIterator& operator++()
+    // bool operator==(const EdgeIterator&) const
+
+   private:
+    friend class Graph;
+    // HW1 #3: YOUR CODE HERE
+  };
+
+  // HW1 #3: YOUR CODE HERE
+  // Supply definitions AND SPECIFICATIONS for:
+  // edge_iterator edge_begin() const
+  // edge_iterator edge_end() const
+
+
+  /** @class Graph::IncidentIterator
+   * @brief Iterator class for edges incident to a node. A forward iterator. */
+  class IncidentIterator {
+   public:
+    // These type definitions help us use STL's iterator_traits.
+    /** Element type. */
+    typedef Edge value_type;
+    /** Type of pointers to elements. */
+    typedef Edge* pointer;
+    /** Type of references to elements. */
+    typedef Edge& reference;
+    /** Iterator category. */
+    typedef std::input_iterator_tag iterator_category;
+    /** Difference between iterators */
+    typedef std::ptrdiff_t difference_type;
+
+    /** Construct an invalid IncidentIterator. */
+    IncidentIterator() {
+    }
+
+    // HW1 #5: YOUR CODE HERE
+    // Supply definitions AND SPECIFICATIONS for:
+    // Edge operator*() const
+    // IncidentIterator& operator++()
+    // bool operator==(const IncidentIterator&) const
+
+   private:
+    friend class Graph;
+    // HW1 #5: YOUR CODE HERE
+  };
 
  private:
 
