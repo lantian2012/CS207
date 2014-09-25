@@ -30,7 +30,7 @@ int main(int argc, char** argv)
   }
 
   // Construct a Graph
-  using GraphType = Graph;
+  using GraphType = Graph<double>;
   GraphType graph;
   std::vector<typename GraphType::node_type> nodes;
 
@@ -58,8 +58,11 @@ int main(int argc, char** argv)
   viewer.launch();
 
   // Set the viewer
+  auto node_map = viewer.empty_node_map(graph);
+  viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
+  viewer.add_edges(graph.edge_begin(), graph.edge_end(), node_map);
   //viewer.draw_graph_nodes(graph);
-  viewer.draw_graph(graph);
+  //viewer.draw_graph(graph);
   viewer.center_view();
   return 0;
 }

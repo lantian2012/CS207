@@ -239,7 +239,6 @@ class SDLViewer {
 
       // Set all nodes to be white
       colors_ = std::vector<Color>(coords_.size(), Color(1,1,1));
-
       // Insert edges accoring to our mapping
       size_type num_edges = g.num_edges();
       for (size_type i = 0; i < num_edges; ++i) {

@@ -44,9 +44,22 @@ class filter_iterator
 
   // HW1 #4: YOUR CODE HERE
   // Supply definitions AND SPECIFICATIONS for:
-  // value_type operator*() const;
-  // self_type& operator++();
-  // bool operator==(const self_type&) const;
+  value_type operator*() const{
+    return *it_;
+  }
+  self_type& operator++(){
+    if (it_ == end_)
+      return *this;
+    do{
+      ++it_;
+    } while (it_ != end_ && !p_(*it_));
+    return *this;
+  }
+  //Make sure user can put it in both begin
+  //and end
+  bool operator==(const self_type& x) const{
+    return (it_ == x.end_);
+  }
 
  private:
   Pred p_;
@@ -119,6 +132,9 @@ int main(int argc, char** argv)
 
   // HW1 #4: YOUR CODE HERE
   // Use the filter_iterator to plot an induced subgraph.
-
+  auto node_map = viewer.empty_node_map(graph);
+  auto it = make_filtered(graph.node_begin(), graph.node_end(),SlicePredicate());
+  viewer.add_nodes(it, it, node_map);
+  viewer.add_edges(graph.edge_begin(), graph.edge_end(), node_map);
   return 0;
 }
