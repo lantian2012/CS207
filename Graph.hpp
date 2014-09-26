@@ -29,10 +29,7 @@ class Graph {
   // (As with all the "YOUR CODE HERE" markings, you may not actually NEED
   // code here. Just use the space if you need it.)
   
-  struct internal_node;  //for storing nodes in graph
-  
-  
-  
+  struct internal_node;  //for storing nodes and their neighbors in graph
 
  public:
 
@@ -110,7 +107,8 @@ class Graph {
    */
   void clear() {
     // HW0: YOUR CODE HERE
-    nodes.clear();
+    nodes.clear();  //clear internal nodes
+    //set sizes to be 0
     size_ = 0;
     edgesize_ = 0;
   }
@@ -179,31 +177,48 @@ class Graph {
      */
     bool operator<(const Node& x) const {
       // HW0: YOUR CODE HERE
-      return (idx_ < x.idx_);
+      if (graph_ == x.graph_)
+        return (idx_ < x.idx_);
+      else
+        return (graph_ < x.graph_);
     }
 
     // HW1: YOUR CODE HERE
     // Supply definitions AND SPECIFICATIONS for:
 
-    /** Get the value associated with this Node
+    /** Return the value associated with this Node
+     *  For rvalue operations
      */
     node_value_type& value(){
       return fetch().value;
     }
 
-    /** Get the value associated with this Node
+    /** Return the value associated with this Node
+     *  For lvalue operations
      */
     const node_value_type& value() const {
       return fetch().value;
     }
 
-    // Get the size 
+    /** Return the number of incident edges of this node
+     *  Incident are edges spawned by this node
+     */
     size_type degree() const{
       return fetch().neighbors.size();
     }
+    /* Return an iterator that points to the first incident edge of this node
+     * If degree()==0, the returned iterator value shall not be dereferenced
+     */
     incident_iterator edge_begin() const{
       return IncidentIterator(graph_, idx_, 0);
     }
+    /*  Returns an iterator referring to the past-the-end incident edge
+       *  of this node
+     *The past-the-end incident edge is the theoretical incident edge that 
+       *  would follow the last edge. It does not point to any element, and 
+       *  thus shall not be dereferenced.
+     *If degree()==0, this function returns the same as edge_begin().
+     */
     incident_iterator edge_end() const{
       return IncidentIterator(graph_, idx_, degree());
     }
@@ -222,7 +237,8 @@ class Graph {
       : graph_(const_cast<graph_type*>(graph)), idx_(idx){
       }
     /**
-     Fetch internal node stored in graph
+     * Fetch internal node stored in graph
+     * @post return.uid_ = uid_
      */
     internal_node& fetch() const {
       if (idx_ >= graph_->size())
@@ -238,6 +254,7 @@ class Graph {
 
   /** Add a node to the graph, returning the added node.
    * @param[in] position The new node's position
+   * @param[in] value_in The value associated with this node
    * @post new size() == old size() + 1
    * @post result_node.index() == old size()
    *
@@ -316,8 +333,9 @@ class Graph {
      */
     bool operator==(const Edge& x) const {
       // HW0: YOUR CODE HERE
-      //(void) x;          // Quiet compiler warning
       if (graph_ == x.graph_ && node1_ == x.node1_ && node2_ == x.node2_)
+        return true;
+      else if (graph_ == x.graph_ && node1_ == x.node2_ && node2_ == x.node1_)
         return true;
       return false;
     }
@@ -332,7 +350,10 @@ class Graph {
      */
     bool operator<(const Edge& x) const {
       // HW0: YOUR CODE HERE
-      return (node1_ < x.node1_);
+      if (graph_ == x.graph_)
+        return (node1_ < x.node1_);
+      else
+        return (graph_ < x.graph_);
     }
 
    private:
@@ -361,16 +382,23 @@ class Graph {
     // HW0: YOUR CODE HERE
     return edgesize_;
   }
+  /** Add an edge to the graph
+   *@param[in] a, b are both valid nodes in the graph
+   *@return The edge that has been added
+   * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
+   */
   Edge add_edge(const Node& a, const Node& b) {
     // HW0: YOUR CODE HERE
     size_type node1_uid = a.index();
     size_type node2_uid = b.index();
+    //check if edge exists
     if (has_edge(a, b)){
       if (node1_uid < node2_uid)
         return Edge(this, node1_uid, node2_uid);
       else
         return Edge(this, node2_uid, node1_uid);
     }
+    //if not, add a new edge
     nodes[node1_uid].neighbors.push_back(node2_uid);
     nodes[node2_uid].neighbors.push_back(node1_uid);
     edgesize_++;
@@ -390,6 +418,7 @@ class Graph {
     // HW1: YOUR CODE HERE
     size_type node1_uid = a.index();
     size_type node2_uid = b.index();
+    //find Node b in the neighbors of Node a
     auto it = std::find(nodes[node1_uid].neighbors.begin(), nodes[node1_uid].neighbors.end(), node2_uid);
     if (it == nodes[node1_uid].neighbors.end())
       return false;
@@ -403,10 +432,10 @@ class Graph {
    */
   Edge edge(size_type i) const {
     // HW0: YOUR CODE HERE
-    unsigned int count = 0;
+    unsigned int count = 0;  //the number of edges that has been iterated
     i = i+1;
-    unsigned int j = 0;
-    unsigned int k = 0;
+    unsigned int j = 0;   //the current node 
+    unsigned int k = 0;   //the current index in neighbors
     while(count < i){
       if (k < nodes[j].neighbors.size() && nodes[j].neighbors[k] > j){
         count++;
@@ -417,6 +446,7 @@ class Graph {
         j++;
       }
     }
+    //a special case to deal with the last neighbor of a node
     if (k == 0){
       j--;
       return Edge(this, j, nodes[j].neighbors.back());
@@ -454,19 +484,25 @@ class Graph {
     // HW1 #2: YOUR CODE HERE
     // Supply definitions AND SPECIFICATIONS for:
     
-    //return the Node the interator is pointing to
+    //return the Node pointed by the interator
     Node operator*() const{
       return graph_->node(uid_);
     }
 
-    //return the NodeIterator that points to the
-    //next position
-    //@pre self.uid_ < graph_->size()
+    /*return the NodeIterator that points to the
+     *next node
+     *@pre uid_ < graph_->size()
+     *@post (*result).index() = uid_ + 1
+     */
     NodeIterator& operator++(){
-      uid_++;
+      if (uid_ < graph_->size())
+        uid_++;
       return *this;
     }
-    //True if pointing to the same node in the same graph
+    /*Test whether this node_iterator is the same as @a x
+     * two node_iterators are the same if they point to the 
+       * same Node object 
+     */
     bool operator==(const NodeIterator& x) const{
       if (graph_ == x.graph_ && uid_ == x.uid_)
         return true;
@@ -488,14 +524,20 @@ class Graph {
 
   // HW1 #2: YOUR CODE HERE
   // Supply definitions AND SPECIFICATIONS for:
-  //return the node_iterator that points to the first node
-  //if no nodes exist, still points to the initial position
+  /* Return the node_iterator that points to the first node of the graph
+   * If size()==0, the returned iterator value shall not be dereferenced
+   */
   node_iterator node_begin() const{
     return NodeIterator(this, 0);
   }
-  //return the node_iterator that points to the position
-  //after the last node
-  //if no nodes exist, points to the initial position
+  
+
+  /*  Returns an iterator referring to the past-the-end node
+   *The past-the-end node is the theoretical node that 
+     *  would follow the last node. It does not point to any element, and 
+     *  thus shall not be dereferenced.
+   *If size()==0, this function returns the same as node_begin().
+   */
   node_iterator node_end() const{
     return NodeIterator(this, nodes.size());
   }
@@ -523,14 +565,23 @@ class Graph {
     // HW1 #3: YOUR CODE HERE
     // Supply definitions AND SPECIFICATIONS for:
 
-
+    //return the Edge pointed by the interator
     Edge operator*() const{
       return Edge(graph_, node_, graph_->nodes[node_].neighbors[nbidx_]);
     }
 
-
+    /*return the EdgeIterator that points to the next edge
+     *@pre has_edge((*self).node1().position(), (*self),node2().position) == true
+     *@post (*result).node1().index() < (*result).node2().index()
+     */
+    //RI g_ != null
+    //   uid1_ =< g->adj_[uid1_].size()
+    //   it_<g->adj[uid1_].end()
+    // END: uid1_ == g->adj_.size()
+    //   uid1_ < *it_ 
     EdgeIterator& operator++(){
       //cycles until next edge is found or reaches the end
+      assert(node_ < graph_->size()); 
       do{
         if (nbidx_ < (graph_->nodes[node_].neighbors.size()-1)){
           nbidx_++;
@@ -544,7 +595,10 @@ class Graph {
       } while (node_ != graph_->nodes.size() && graph_->nodes[node_].neighbors[nbidx_] < node_); 
       return *this;
     }
-    
+    /*Test whether this edge_iterator is the same as @a x
+     * two edge_iterators are the same if they point to the 
+       * same Edge object 
+     */
     bool operator==(const EdgeIterator& x) const{
       return (graph_ == x.graph_ && node_ == x.node_ && nbidx_ == x.nbidx_);
     }
@@ -564,6 +618,9 @@ class Graph {
 
   // HW1 #3: YOUR CODE HERE
   // Supply definitions AND SPECIFICATIONS for:
+  /* Return the edge_iterator that points to the first edge of the graph
+   * If num_edges()==0, the returned iterator value shall not be dereferenced
+   */
   edge_iterator edge_begin() const{
     unsigned int i = 0;
     while (i < nodes.size()){
@@ -572,6 +629,15 @@ class Graph {
     }
     return EdgeIterator(this, 0, 0);
   }
+
+  /*  Returns an iterator referring to the past-the-end edge
+   *The past-the-end edge is the theoretical edge that 
+     *  does not point to any element, and 
+     *  thus shall not be dereferenced.
+   *If size()==0, this function returns the same as node_begin()
+   *@post result.node_ = graph->size() + 1
+   *@post result.idx_ = 0
+   */
   edge_iterator edge_end() const{
     unsigned int j = 0;
     for (unsigned int i=0; i<nodes.size(); ++i){
