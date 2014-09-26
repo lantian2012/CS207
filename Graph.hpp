@@ -572,7 +572,7 @@ class Graph {
 
     /*return the EdgeIterator that points to the next edge
      *@pre has_edge((*self).node1().position(), (*self),node2().position) == true
-     *@post (*result).node1().index() < (*result).node2().index()
+     *@post if (result !=edge_end()) (*result).node1().index() < (*result).node2().index()
      */
     //RI g_ != null
     //   uid1_ =< g->adj_[uid1_].size()
@@ -627,7 +627,7 @@ class Graph {
       if (nodes[i].neighbors.size() != 0)
         return EdgeIterator(this, i, 0);
     }
-    return EdgeIterator(this, 0, 0);
+    return EdgeIterator(this, size(), 0);
   }
 
   /*  Returns an iterator referring to the past-the-end edge
@@ -635,16 +635,11 @@ class Graph {
      *  does not point to any element, and 
      *  thus shall not be dereferenced.
    *If size()==0, this function returns the same as node_begin()
-   *@post result.node_ = graph->size() + 1
+   *@post result.node_ = size()
    *@post result.idx_ = 0
    */
   edge_iterator edge_end() const{
-    unsigned int j = 0;
-    for (unsigned int i=0; i<nodes.size(); ++i){
-      if (nodes[i].neighbors.size() != 0)
-        j = i+1;
-    }
-    return EdgeIterator(this, j, 0);
+    return EdgeIterator(this, size(), 0);
   }
 
 
