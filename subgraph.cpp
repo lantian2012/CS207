@@ -55,8 +55,8 @@ class filter_iterator
     } while (it_ != end_ && !p_(*it_));
     return *this;
   }
-  //Make sure user can put it in both begin
-  //and end
+  //True if (it_ == last): When filter_iterator
+  //reaches its last position
   bool operator==(const self_type& x) const{
     return (it_ == x.end_);
   }
@@ -84,6 +84,14 @@ filter_iterator<Pred,Iter> make_filtered(const Iter& it, const Iter& end,
 // Specify and write an interesting predicate on the nodes.
 // Explain what your predicate is intended to do and test it.
 // If you'd like you may create new nodes and tets files.
+//delete all isolated nodes
+//only show half of structure
+struct MyPredicate{
+  template <typename NODE>
+  bool operator()(const NODE& n) {
+    return (n.degree()!=0 && n.position().x<n.position().z);
+  }
+};
 
 /** Test predicate for HW1 #4 */
 struct SlicePredicate {
@@ -133,7 +141,7 @@ int main(int argc, char** argv)
   // HW1 #4: YOUR CODE HERE
   // Use the filter_iterator to plot an induced subgraph.
   auto node_map = viewer.empty_node_map(graph);
-  auto it = make_filtered(graph.node_begin(), graph.node_end(),SlicePredicate());
+  auto it = make_filtered(graph.node_begin(), graph.node_end(),MyPredicate());
   viewer.add_nodes(it, it, node_map);
   viewer.add_edges(graph.edge_begin(), graph.edge_end(), node_map);
   return 0;

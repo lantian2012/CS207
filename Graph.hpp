@@ -196,9 +196,17 @@ class Graph {
     const node_value_type& value() const {
       return fetch().value;
     }
-    // size_type degree() const;
-    // incident_iterator edge_begin() const;
-    // incident_iterator edge_end() const;
+
+    // Get the size 
+    size_type degree() const{
+      return fetch().neighbors.size();
+    }
+    incident_iterator edge_begin() const{
+      return IncidentIterator(graph_, idx_, 0);
+    }
+    incident_iterator edge_end() const{
+      return IncidentIterator(graph_, idx_, degree());
+    }
 
    private:
     // Allow Graph to access Node's private member data and functions.
@@ -335,8 +343,8 @@ class Graph {
     // that will not be visible to users, but may be useful within Graph.
     // i.e. Graph needs a way to construct valid Edge objects
     graph_type* graph_;  //pointer to the associated graph
-    size_type node1_;      //the uid of node 1  node1_<node2_
-    size_type node2_;      //the uid of node 2  node1_<node2_
+    size_type node1_;      //the uid of node 1  
+    size_type node2_;      //the uid of node 2  
     
     //private constructor for graph to construct edge instance
     Edge(const graph_type* graph, size_type node1, size_type node2)
@@ -576,7 +584,7 @@ class Graph {
 
   /** @class Graph::IncidentIterator
    * @brief Iterator class for edges incident to a node. A forward iterator. */
-  class IncidentIterator {
+  class IncidentIterator:private totally_ordered<IncidentIterator> {
    public:
     // These type definitions help us use STL's iterator_traits.
     /** Element type. */
@@ -596,13 +604,33 @@ class Graph {
 
     // HW1 #5: YOUR CODE HERE
     // Supply definitions AND SPECIFICATIONS for:
-    // Edge operator*() const
-    // IncidentIterator& operator++()
-    // bool operator==(const IncidentIterator&) const
+    //return the Edge pointing to
+    //@post result.node1().index() = uid_;  result.node2().index()=idx_
+    Edge operator*() const{
+      return Edge(graph_, uid_, graph_->nodes[uid_].neighbors[idx_]);
+    }
+    IncidentIterator& operator++(){
+      if (idx_ == graph_->nodes[uid_].neighbors.size())
+        return *this;
+      else{
+        idx_++;
+        return *this;
+      }
+    }
+    bool operator==(const IncidentIterator& x) const{
+      return (graph_ == x.graph_ && uid_ == x.uid_ && idx_ == x.idx_);
+    }
 
    private:
     friend class Graph;
     // HW1 #5: YOUR CODE HERE
+    graph_type* graph_;
+    size_type uid_;    //the uid of the Node that spawns the incident_iterator
+    size_type idx_;    //the index of the edge pointing to
+    //private constructor for graph to construct NodeIterator instance
+    IncidentIterator(const graph_type* graph, size_type uid, size_type idx)
+      : graph_(const_cast<graph_type*>(graph)), uid_(uid), idx_(idx){
+      }
   };
 
  private:

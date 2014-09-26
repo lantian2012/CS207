@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <fstream>
+#include <queue>
 
 #include "CS207/SDLViewer.hpp"
 #include "CS207/Util.hpp"
@@ -27,8 +28,15 @@ struct MyComparator {
 
    template <typename NODE>
    bool operator()(const NODE& node1, const NODE& node2) const {
-    (void) node1; (void) node2;    // Quiet compiler warning
-    return false;
+    double d1;
+    double d2;
+    d1 = (node1.position().x - p_.x)*(node1.position().x - p_.x)
+           +(node1.position().y - p_.y)*(node1.position().y - p_.y)
+           +(node1.position().z - p_.z)*(node1.position().z - p_.z);
+    d2 = (node2.position().x - p_.x)*(node2.position().x - p_.x)
+           +(node2.position().y - p_.y)*(node2.position().y - p_.y)
+           +(node2.position().z - p_.z)*(node2.position().z - p_.z);
+    return d1 < d2;
   }
 };
 
@@ -50,8 +58,37 @@ struct MyComparator {
  */
 int shortest_path_lengths(Graph<int>& g, const Point& point) {
   // HW1 #4: YOUR CODE HERE
-  (void) g, (void) point;
-  return 0;
+  std::cout<<"entered BFS"<<std::endl;
+  std::queue<Point::size_type> BFSqueue;
+  std::vector<bool> visited(g.size(), false);      //if visited[i] node i has been visited. default false
+  unsigned int max = 0;  //keep track of the maxium distance 
+  Graph<int>::node_iterator root_it = std::min_element(g.node_begin(), g.node_end(), MyComparator(point));
+  //set all node values to be -1
+  for(Graph<int>::node_iterator it=g.node_begin(); it != g.node_end(); ++it){
+    (*it).value() = -1;
+  }
+  //set root node value to be 0
+  (*root_it).value() = 0;
+  visited[(*root_it).index()] = true;
+  BFSqueue.push((*root_it).index());
+  std::cout<<"to enter while"<<std::endl;
+  while(!BFSqueue.empty()){
+    Point::size_type current = BFSqueue.front();
+//std::cout<<"current"<<current<<"  "<<g.node(current).degree()<<std::endl;
+    BFSqueue.pop();
+    for (Graph<int>::incident_iterator it = g.node(current).edge_begin(); it != g.node(current).edge_end(); ++it){
+      Point::size_type neighbor = (*it).node2().index();
+//std::cout<<"incident:"<<neighbor<<std::endl;
+      if (!visited[neighbor]){
+        g.node(neighbor).value() = g.node(current).value() + 1;
+//std::cout<<"current:"<<current<<"  "<<g.node(current).value()<<"neighbor:"<<neighbor<<std::endl;
+        max = g.node(neighbor).value();
+        visited[neighbor] = true;
+        BFSqueue.push(neighbor);
+      }
+    }
+  }
+  return max;
 }
 
 
@@ -95,5 +132,25 @@ int main(int argc, char** argv)
   // HW1 #4: YOUR CODE HERE
   // Use shortest_path_lengths to set the node values to the path lengths
   // Construct a Color functor and view with the SDLViewer
+  unsigned int max; 
+  max = shortest_path_lengths(graph, Point(-1, 0, 1));
+  std::cout<<"max="<<max<<std::endl;
+  class Make_distance{
+  public:
+    Make_distance(unsigned int max):max_(max){
+    }
+    CS207::Color operator() (Graph<int>::Node n){
+      if (n.value() != -1)
+        return CS207::Color::make_heat(1- double(n.value())/max_);
+      else
+        return CS207::Color::make_heat(1);
+    }
+  private:
+    unsigned int max_;
+  };
+  auto node_map = viewer.empty_node_map(graph);
+  //viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
+  viewer.add_nodes(graph.node_begin(), graph.node_end(),Make_distance(max), node_map);
+  viewer.center_view();
   return 0;
 }
