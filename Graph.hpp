@@ -665,11 +665,17 @@ class Graph {
 
     // HW1 #5: YOUR CODE HERE
     // Supply definitions AND SPECIFICATIONS for:
-    //return the Edge pointing to
+    //return the Edge pointed by the incident_iterator
     //@post result.node1().index() = uid_;  result.node2().index()=idx_
     Edge operator*() const{
       return Edge(graph_, uid_, graph_->nodes[uid_].neighbors[idx_]);
     }
+    /*return the Incident Iterator that points to the
+     *next incident edge
+     *@pre idx_<graph_->nodes[uid_].neighbors.size()
+     *@post result.idx_ = idx_ + 1
+     *@post if (result != edge_end()) (*result).node1().index() == idx_
+     */
     IncidentIterator& operator++(){
       if (idx_ == graph_->nodes[uid_].neighbors.size())
         return *this;
@@ -678,6 +684,10 @@ class Graph {
         return *this;
       }
     }
+    /*Test whether this incident_iterator is the same as @a x
+     * two incident_iterators are the same if they point to the 
+       * same Edge object, and spawned by the same Node 
+     */
     bool operator==(const IncidentIterator& x) const{
       return (graph_ == x.graph_ && uid_ == x.uid_ && idx_ == x.idx_);
     }

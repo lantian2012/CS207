@@ -1,16 +1,7 @@
-/**
- * @file shortest_path.cpp
- * Test script for using our templated Graph to determine shortest paths.
- *
- * @brief Reads in two files specified on the command line.
- * First file: 3D Points (one per line) defined by three doubles
- * Second file: Tetrahedra (one per line) defined by 4 indices into the point
- * list
- */
-
 #include <vector>
 #include <fstream>
 #include <queue>
+#include <iterator>
 
 #include "CS207/SDLViewer.hpp"
 #include "CS207/Util.hpp"
@@ -18,9 +9,101 @@
 
 #include "Graph.hpp"
 
-
-/** Comparator that compares the distance from a given point p.
+/** An iterator that skips over elements of another iterator based on whether
+ * those elements satisfy a predicate.
+ *
+ * Given an iterator range [@a first, @a last) and a predicate @a pred,
+ * this iterator models a filtered range such that all i with
+ * @a first <= i < @a last and @a pred(*i) appear in order of the original range.
  */
+template <typename Pred, typename It>
+class filter_iterator
+    : private equality_comparable<filter_iterator<Pred,It>> {
+ public:
+  // Get all of the iterator traits and make them our own
+  typedef typename std::iterator_traits<It>::value_type        value_type;
+  typedef typename std::iterator_traits<It>::pointer           pointer;
+  typedef typename std::iterator_traits<It>::reference         reference;
+  typedef typename std::iterator_traits<It>::difference_type   difference_type;
+  typedef typename std::input_iterator_tag                     iterator_category;
+
+  typedef filter_iterator<Pred,It> self_type;
+
+  // Constructor
+  filter_iterator(const Pred& p, const It& first, const It& last)
+      : p_(p), it_(first), end_(last) {
+    // HW1 #4: YOUR CODE HERE
+    while(it_ != end_ && !p_(*it_))
+      ++it_;
+  }
+
+  // HW1 #4: YOUR CODE HERE
+  // Supply definitions AND SPECIFICATIONS for:
+  //return the value_type object pointed by the filter_iterator
+  value_type operator*() const{
+    return *it_;
+  }
+  /*return the filter_Iterator that points to the next value_type object
+   *and satisfies the predicate
+   */
+  self_type& operator++(){
+    if (it_ == end_)
+      return *this;
+    do{
+      ++it_;
+    } while (it_ != end_ && !p_(*it_));
+    return *this;
+  }
+  //True if (it_ == last): When filter_iterator
+  //reaches its last position
+  /*Test whether this filter_iterator is the same as @a x
+   * two filter_iterators are the same if they point to the 
+     * same value_type object 
+   */
+  bool operator==(const self_type& x) const{
+    return (it_ == x.it_);
+  }
+
+ private:
+  Pred p_;
+  It it_;
+  It end_;
+};
+
+/** Helper function for constructing filter_iterators.
+ *
+ * Usage:
+ * // Construct an iterator that filters odd values out and keeps even values.
+ * std::vector<int> a = ...;
+ * auto it = make_filtered(a.begin(), a.end(), [](int k) {return k % 2 == 0;});
+ */
+template <typename Pred, typename Iter>
+filter_iterator<Pred,Iter> make_filtered(const Iter& it, const Iter& end,
+                                         const Pred& p) {
+  return filter_iterator<Pred,Iter>(p, it, end);
+}
+
+// HW1 #4: YOUR CODE HERE
+// Specify and write an interesting predicate on the nodes.
+// Explain what your predicate is intended to do and test it.
+// If you'd like you may create new nodes and tets files.
+//Delete all isolated nodes
+//Only show half of structure
+struct MyPredicate{
+  template <typename NODE>
+  bool operator()(const NODE& n) {
+    return (n.degree()!=0 && n.position().x<n.position().z);
+  }
+};
+
+/** Test predicate for HW1 #4 */
+struct SlicePredicate {
+  template <typename NODE>
+  bool operator()(const NODE& n) {
+    return n.position().x < 0;
+  }
+};
+
 struct MyComparator {
    Point p_;
    MyComparator(const Point& p) : p_(p) {
@@ -91,8 +174,6 @@ int shortest_path_lengths(Graph<int>& g, const Point& point) {
   return max;
 }
 
-
-
 int main(int argc, char** argv)
 {
   // Check arguments
@@ -143,7 +224,7 @@ int main(int argc, char** argv)
     }
     CS207::Color operator() (Graph<int>::Node n){
       if (n.value() != -1)
-        return CS207::Color::make_heat(1- double(n.value())/max_);
+        return CS207::Color::make_heat(double(n.value())/max_);
       else
         return CS207::Color::make_heat(1);
     }
@@ -151,7 +232,12 @@ int main(int argc, char** argv)
     unsigned int max_;
   };
   auto node_map = viewer.empty_node_map(graph);
-  viewer.add_nodes(graph.node_begin(), graph.node_end(),Make_distance(max), node_map);
+  auto it_begin = make_filtered(graph.node_begin(), graph.node_end(),MyPredicate());
+  auto it_end = make_filtered(graph.node_end(), graph.node_end(),MyPredicate());
+  viewer.add_nodes(it_begin, it_end, Make_distance(max), node_map);
   viewer.center_view();
   return 0;
 }
+
+
+

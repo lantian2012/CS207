@@ -40,13 +40,19 @@ class filter_iterator
   filter_iterator(const Pred& p, const It& first, const It& last)
       : p_(p), it_(first), end_(last) {
     // HW1 #4: YOUR CODE HERE
+    while(it_ != end_ && !p_(*it_))
+      ++it_;
   }
 
   // HW1 #4: YOUR CODE HERE
   // Supply definitions AND SPECIFICATIONS for:
+  //return the value_type object pointed by the filter_iterator
   value_type operator*() const{
     return *it_;
   }
+  /*return the filter_Iterator that points to the next value_type object
+   *and satisfies the predicate
+   */
   self_type& operator++(){
     if (it_ == end_)
       return *this;
@@ -57,8 +63,12 @@ class filter_iterator
   }
   //True if (it_ == last): When filter_iterator
   //reaches its last position
+  /*Test whether this filter_iterator is the same as @a x
+   * two filter_iterators are the same if they point to the 
+     * same value_type object 
+   */
   bool operator==(const self_type& x) const{
-    return (it_ == x.end_);
+    return (it_ == x.it_);
   }
 
  private:
@@ -84,8 +94,8 @@ filter_iterator<Pred,Iter> make_filtered(const Iter& it, const Iter& end,
 // Specify and write an interesting predicate on the nodes.
 // Explain what your predicate is intended to do and test it.
 // If you'd like you may create new nodes and tets files.
-//delete all isolated nodes
-//only show half of structure
+//Delete all isolated nodes
+//Only show half of structure
 struct MyPredicate{
   template <typename NODE>
   bool operator()(const NODE& n) {
@@ -141,8 +151,9 @@ int main(int argc, char** argv)
   // HW1 #4: YOUR CODE HERE
   // Use the filter_iterator to plot an induced subgraph.
   auto node_map = viewer.empty_node_map(graph);
-  auto it = make_filtered(graph.node_begin(), graph.node_end(),MyPredicate());
-  viewer.add_nodes(it, it, node_map);
+  auto it_begin = make_filtered(graph.node_begin(), graph.node_end(),MyPredicate());
+  auto it_end = make_filtered(graph.node_end(), graph.node_end(),MyPredicate());
+  viewer.add_nodes(it_begin, it_end, node_map);
   viewer.add_edges(graph.edge_begin(), graph.edge_end(), node_map);
   return 0;
 }
