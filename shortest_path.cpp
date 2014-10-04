@@ -58,7 +58,6 @@ struct MyComparator {
  */
 int shortest_path_lengths(Graph<int>& g, const Point& point) {
   // HW1 #4: YOUR CODE HERE
-  std::cout<<"entered BFS"<<std::endl;
   std::queue<Point::size_type> BFSqueue;        //Queue for BFS
   std::vector<bool> visited(g.size(), false);      //if (visited[i]==true) node i has been visited. default false
   unsigned int max = 0;  //keep track of the maxium distance 
