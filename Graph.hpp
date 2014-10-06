@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <vector>
 #include <cassert>
+#include <math.h>
 
 #include "CS207/Util.hpp"
 #include "Point.hpp"
@@ -19,7 +20,7 @@
  * Users can add and retrieve nodes and edges. Edges are unique (there is at
  * most one edge between any pair of distinct nodes).
  */
-template <typename V>
+template <typename V, typename E = char>
 class Graph {
  private:
 
@@ -42,6 +43,9 @@ class Graph {
   
   /** Synonym for the type of value stored in Node */
   typedef V node_value_type;
+
+  /** Synonym for the type of value stored in Edge */
+  typedef E edge_value_type;
 
   /** Predeclaration of Node type. */
   class Node;
@@ -146,6 +150,10 @@ class Graph {
     /** Return this node's position. */
     const Point& position() const {
       // HW0: YOUR CODE HERE
+      return fetch().point;
+    }
+    /** Return a position that can be modified */
+    Point& position(){
       return fetch().point;
     }
 
@@ -327,6 +335,11 @@ class Graph {
       return graph_->node(node2_);
     }
 
+    double length() const{
+      Point diff = node1().position() - node2().position();
+      return sqrt(dot(diff, diff));
+    }
+
     /** Test whether this edge and @a x are equal.
      *
      * Equal edges are from the same graph and have the same nodes.
@@ -355,6 +368,17 @@ class Graph {
       else
         return (graph_ < x.graph_);
     }
+    
+    //return the value associated with edge for lvalue operations
+    edge_value_type& value(){
+      return value_;
+    }
+
+    //return the value associated with edge for rvalue operations
+    const edge_value_type& value() const{
+      return value_;
+    }
+
 
    private:
     // Allow Graph to access Edge's private member data and functions.
@@ -365,7 +389,8 @@ class Graph {
     // i.e. Graph needs a way to construct valid Edge objects
     graph_type* graph_;  //pointer to the associated graph
     size_type node1_;      //the uid of node 1  
-    size_type node2_;      //the uid of node 2  
+    size_type node2_;      //the uid of node 2 
+    edge_value_type value_; //the value associated with the edge
     
     //private constructor for graph to construct edge instance
     Edge(const graph_type* graph, size_type node1, size_type node2)
@@ -400,7 +425,9 @@ class Graph {
     }
     //if not, add a new edge
     nodes[node1_uid].neighbors.push_back(node2_uid);
+    nodes[node1_uid].edgevalues.push_back(edge_value_type());
     nodes[node2_uid].neighbors.push_back(node1_uid);
+    nodes[node2_uid].edgevalues.push_back(edge_value_type());
     edgesize_++;
     if (node1_uid < node2_uid)
       return Edge(this, node1_uid, node2_uid);
@@ -567,7 +594,9 @@ class Graph {
 
     //return the Edge pointed by the interator
     Edge operator*() const{
-      return Edge(graph_, node_, graph_->nodes[node_].neighbors[nbidx_]);
+      Edge edge = Edge(graph_, node_, graph_->nodes[node_].neighbors[nbidx_]);
+      edge.value() = graph_->nodes[node_].edgevalues[nbidx_];
+      return edge;
     }
 
     /*return the EdgeIterator that points to the next edge
@@ -715,6 +744,7 @@ class Graph {
     size_type idx;
     std::vector<size_type> neighbors;   //the uid of adjacent nodes
     node_value_type value;        //the additional value stored in nodes
+    std::vector<edge_value_type> edgevalues;
   };
 
   

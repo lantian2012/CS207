@@ -27,6 +27,14 @@ struct NodeData {
   double mass;     //< Node mass
 };
 
+/** Custom structure of data to store with Edges */
+struct EdgeData{
+  double L;
+  double K;
+};
+
+
+
 // HW2 #1 YOUR CODE HERE
 // Define your Graph type
 typedef Graph<NodeData> GraphType;
@@ -78,10 +86,26 @@ struct Problem1Force {
    * model that by returning a zero-valued force. */
   Point operator()(Node n, double t) {
     // HW2 #1: YOUR CODE HERE
-    (void) n; (void) t;     // silence compiler warnings
-    return Point();
+    //constrain the corners
+    if (n.position() == Point(0, 0, 0) || n.position() == Point(1, 0, 0))
+      return Point(0, 0, 0);
+    Point spring = Point(0, 0, 0);  //spring force
+    Point gravity;   //gravity force
+    gravity = Point(0, 0, -grav)*n.value().mass;
+    //add up all spring forces
+    for (auto it = n.edge_begin(); it != n.edge_end(); ++it){
+      Edge incident = *it;
+      spring += (K*(incident.node2().position()-n.position())/incident.length()*(incident.length()-L));
+    }
+    return (spring+gravity);
   }
+
+  static double L; //the initial length of the edges
+  static double K; //spring constant
 };
+
+double Problem1Force::L = 0;
+double Problem1Force::K = 0;
 
 
 int main(int argc, char** argv) {
@@ -123,6 +147,13 @@ int main(int argc, char** argv) {
   // HW2 #1 YOUR CODE HERE
   // Set initial conditions for your nodes, if necessary.
   // Construct Forces/Constraints
+  for (auto it = graph.node_begin(); it != graph.node_end(); ++it){
+    (*it).value().mass = float(1)/graph.size();
+    (*it).value().velocity = Point(0, 0, 0);
+  }
+
+  Problem1Force::K = 100;
+  Problem1Force::L = (*graph.edge_begin()).length();
 
   // Print out the stats
   std::cout << graph.num_nodes() << " " << graph.num_edges() << std::endl;
