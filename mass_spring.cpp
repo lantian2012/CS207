@@ -37,7 +37,7 @@ struct EdgeData{
 
 // HW2 #1 YOUR CODE HERE
 // Define your Graph type
-typedef Graph<NodeData> GraphType;
+typedef Graph<NodeData, EdgeData> GraphType;
 typedef typename GraphType::node_type Node;
 typedef typename GraphType::edge_type Edge;
 
@@ -95,17 +95,17 @@ struct Problem1Force {
     //add up all spring forces
     for (auto it = n.edge_begin(); it != n.edge_end(); ++it){
       Edge incident = *it;
-      spring += (K*(incident.node2().position()-n.position())/incident.length()*(incident.length()-L));
+      spring += ((incident.value().K)*(incident.node2().position()-incident.node1().position())/incident.length()*(incident.length()-incident.value().L));
     }
     return (spring+gravity);
   }
 
-  static double L; //the initial length of the edges
-  static double K; //spring constant
+  //static double L; //the initial length of the edges
+  //static double K; //spring constant
 };
 
-double Problem1Force::L = 0;
-double Problem1Force::K = 0;
+//double Problem1Force::L = 0;
+//double Problem1Force::K = 0;
 
 
 int main(int argc, char** argv) {
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
     for (unsigned i = 1; i < t.size(); ++i) {
       graph.add_edge(nodes[t[0]], nodes[t[1]]);
       graph.add_edge(nodes[t[0]], nodes[t[2]]);
-#if 0
+#if 1
       // Diagonal edges: include as of HW2 #2
       graph.add_edge(nodes[t[0]], nodes[t[3]]);
       graph.add_edge(nodes[t[1]], nodes[t[2]]);
@@ -151,10 +151,14 @@ int main(int argc, char** argv) {
     (*it).value().mass = float(1)/graph.size();
     (*it).value().velocity = Point(0, 0, 0);
   }
-
-  Problem1Force::K = 100;
-  Problem1Force::L = (*graph.edge_begin()).length();
-
+  for (auto it = graph.edge_begin(); it != graph.edge_end(); ++it){
+    (*it).value().L = (*it).length();
+    (*it).value().K = 100;
+    std::cout<<(*it).value().L<<std::endl;
+  }
+  //Problem1Force::L = (*graph.edge_begin()).length();
+  //Problem1Force::K = 100;
+  
   // Print out the stats
   std::cout << graph.num_nodes() << " " << graph.num_edges() << std::endl;
 

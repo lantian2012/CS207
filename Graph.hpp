@@ -371,12 +371,12 @@ class Graph {
     
     //return the value associated with edge for lvalue operations
     edge_value_type& value(){
-      return value_;
+      return graph_->nodes[x_].edgevalues[y_];
     }
 
     //return the value associated with edge for rvalue operations
     const edge_value_type& value() const{
-      return value_;
+      return graph_->nodes[x_].edgevalues[y_];
     }
 
 
@@ -389,8 +389,9 @@ class Graph {
     // i.e. Graph needs a way to construct valid Edge objects
     graph_type* graph_;  //pointer to the associated graph
     size_type node1_;      //the uid of node 1  
-    size_type node2_;      //the uid of node 2 
-    edge_value_type value_; //the value associated with the edge
+    size_type node2_;      //the uid of node 2
+    size_type x_;  //the position in adjacency list 
+    size_type y_;  //the position in adjacency list
     
     //private constructor for graph to construct edge instance
     Edge(const graph_type* graph, size_type node1, size_type node2)
@@ -595,7 +596,8 @@ class Graph {
     //return the Edge pointed by the interator
     Edge operator*() const{
       Edge edge = Edge(graph_, node_, graph_->nodes[node_].neighbors[nbidx_]);
-      edge.value() = graph_->nodes[node_].edgevalues[nbidx_];
+      edge.x_ = node_;
+      edge.y_ = nbidx_;
       return edge;
     }
 
