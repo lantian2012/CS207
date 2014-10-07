@@ -138,6 +138,7 @@ int main()
     unsigned n = (unsigned) CS207::random(0, g.num_nodes());
     g.remove_node(g.node(n));
   }
+  std::cout<<g.num_nodes()<<std::endl;
   sf_print(g.num_nodes() == 50, "Removed 50 Nodes");
 
   // Count edges the long way
@@ -175,5 +176,6 @@ int main()
 	      << (fail_count > 1 ? " FAILURES" : " FAILURE") << std::endl;
     return 1;
   } else
-    return 0;
+    return 0; 
+  return 0;
 }

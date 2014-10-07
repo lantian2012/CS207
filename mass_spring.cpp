@@ -151,13 +151,18 @@ int main(int argc, char** argv) {
     (*it).value().mass = float(1)/graph.size();
     (*it).value().velocity = Point(0, 0, 0);
   }
-  for (auto it = graph.edge_begin(); it != graph.edge_end(); ++it){
-    (*it).value().L = (*it).length();
-    (*it).value().K = 100;
-    std::cout<<(*it).value().L<<std::endl;
+  // for (auto it = graph.edge_begin(); it != graph.edge_end(); ++it){
+  //   (*it).value().L = (*it).length();
+  //   (*it).value().K = 100;
+  //   std::cout<<(*it).node1().index()<<"  "<<(*it).node2().index()<<std::endl;
+  // }
+  for (auto it = graph.node_begin(); it != graph.node_end(); ++it)
+  {
+    for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
+       (*j).value().L = (*j).length();
+       (*j).value().K = 100;
+    }
   }
-  //Problem1Force::L = (*graph.edge_begin()).length();
-  //Problem1Force::K = 100;
   
   // Print out the stats
   std::cout << graph.num_nodes() << " " << graph.num_edges() << std::endl;
