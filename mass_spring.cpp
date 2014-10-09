@@ -88,6 +88,20 @@ struct SphereRemoveConstraint
   }
 };
 
+
+struct ConstantConstraint
+{
+  void operator()(GraphType& g, double){
+    for (auto it = g.node_begin(); it != g.node_end(); ++it)
+    {
+      auto n = *it;
+      if (n.position() == Point(0, 0, 0) || n.position() == Point(1, 0, 0)){
+        n.value().velocity = Point(0, 0, 0);
+      }
+    }
+  }
+};
+
 template<typename C1, typename C2>
 struct CombinedConstraint
 {
@@ -123,7 +137,7 @@ CombinedConstraint<C1, C2> make_combined_constraint(C1 c1 = C1(), C2 c2 = C2()){
  */
 template <typename G, typename F>
 double symp_euler_step(G& g, double t, double dt, F force) {
-  CombinedConstraint<SphereRemoveConstraint, PlaneConstraint> constraint;
+  auto constraint = make_combined_constraint(make_combined_constraint(ConstantConstraint(), SphereRemoveConstraint()), PlaneConstraint());
   // Compute the {n+1} node positions
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
@@ -137,10 +151,12 @@ double symp_euler_step(G& g, double t, double dt, F force) {
   // Compute the {n+1} node velocities
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
-    if (n.position() != Point(0, 0, 0) && n.position() != Point(1, 0, 0)){
+    //if (n.position() != Point(0, 0, 0) && n.position() != Point(1, 0, 0)){
       // v^{n+1} = v^{n} + F(x^{n+1},t) * dt / m
-      n.value().velocity += force(n, t) * (dt / n.value().mass);
-    }
+      //n.value().velocity += force(n, t) * (dt / n.value().mass);
+    //}
+    n.value().velocity += force(n, t) * (dt / n.value().mass);
+
   }
 
   return t + dt;
