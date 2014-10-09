@@ -301,10 +301,15 @@ size_type remove_node(const Node& n){
     return 0;
   //clean up adjacency list
   for (size_type i : nodes[n.uid_].neighbors){
-    nodes[i].neighbors.erase(std::find(nodes[i].neighbors.begin(), nodes[i].neighbors.end(), n.uid_));
+    size_type pos = 0;
+    while(nodes[i].neighbors[pos] != n.uid_)
+      ++pos;
+    nodes[i].neighbors.erase(nodes[i].neighbors.begin()+pos);
+    nodes[i].edgevalues.erase(nodes[i].edgevalues.begin()+pos);
   }
   edgesize_ -= nodes[n.uid_].neighbors.size();
   nodes[n.uid_].neighbors.clear();
+  nodes[n.uid_].edgevalues.clear();
   //update index for valid nodes
   for (size_type i = nodes[n.uid_].idx+1; i < i2u.size(); ++i)
   {
@@ -314,6 +319,11 @@ size_type remove_node(const Node& n){
   i2u.erase(i2u.begin()+nodes[n.uid_].idx);
   --size_;
   return 1;
+}
+
+node_iterator remove_node(node_iterator n_it){
+  remove_node(*n_it);
+  return n_it;
 }
 
   /** Determine if this Node belongs to this Graph
@@ -497,11 +507,35 @@ size_type remove_node(const Node& n){
       return 0;
     size_type uid1 = n1.uid_;
     size_type uid2 = n2.uid_;
-    nodes[uid1].neighbors.erase(std::find(nodes[uid1].neighbors.begin(), nodes[uid1].neighbors.end(), uid2));
-    nodes[uid2].neighbors.erase(std::find(nodes[uid2].neighbors.begin(), nodes[uid2].neighbors.end(), uid1));
+    size_type pos = 0;
+    while(nodes[uid1].neighbors[pos] != uid2)
+      ++pos;
+    nodes[uid1].neighbors.erase(nodes[uid1].neighbors.begin()+pos);
+    nodes[uid1].edgevalues.erase(nodes[uid1].edgevalues.begin()+pos);
+    pos = 0;
+    while(nodes[uid2].neighbors[pos] != uid1)
+      ++pos;
+    nodes[uid2].neighbors.erase(nodes[uid2].neighbors.begin()+pos);
+    nodes[uid2].edgevalues.erase(nodes[uid2].edgevalues.begin()+pos);
     --edgesize_;
     return 1;
   } 
+
+  size_type remove_edge(const Edge& e)
+  {
+    return remove_edge(e.node1(), e.node1());
+  }
+
+  edge_iterator remove_edge(edge_iterator e_it)
+  {
+    remove_edge(*e_it);
+    if (e_it.nbidx_ < nodes[e_it.node_].neighbors.size())
+    {
+      return e_it;
+    }
+    else
+      return ++e_it;
+  }
 
 
 
@@ -740,7 +774,7 @@ size_type remove_node(const Node& n){
    *@post result.idx_ = 0
    */
   edge_iterator edge_end() const{
-    return EdgeIterator(this, size(), 0);
+    return EdgeIterator(this, nodes.size(), 0);
   }
 
 
