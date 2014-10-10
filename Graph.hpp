@@ -23,12 +23,6 @@
 template <typename V, typename E = char>
 class Graph {
  private:
-
-  // HW0: YOUR CODE HERE
-  // Use this space for declarations of important internal types you need
-  // later in the Graph's definition.
-  // (As with all the "YOUR CODE HERE" markings, you may not actually NEED
-  // code here. Just use the space if you need it.)
   
   struct internal_node;  //for storing nodes and their neighbors in graph
 
@@ -83,7 +77,6 @@ class Graph {
 
   /** Construct an empty graph. */
   Graph() {
-    // HW0: YOUR CODE HERE
     size_ = 0;
     edgesize_ = 0;
     
@@ -100,7 +93,6 @@ class Graph {
    * Complexity: O(1).
    */
   size_type size() const {
-    // HW0: YOUR CODE HERE
     return size_;
   }
 
@@ -110,10 +102,9 @@ class Graph {
    * Invalidates all outstanding Node and Edge objects.
    */
   void clear() {
-    // HW0: YOUR CODE HERE
     nodes.clear();  //clear internal nodes
-    edges.clear();
-    i2u.clear();
+    edges.clear();  //clear internal edges
+    i2u.clear();    //clear all nodes
     //set sizes to be 0
     size_ = 0;
     edgesize_ = 0;
@@ -146,12 +137,10 @@ class Graph {
      * @endcode
      */
     Node() {
-      // HW0: YOUR CODE HERE
     }
 
     /** Return this node's position. */
     const Point& position() const {
-      // HW0: YOUR CODE HERE
       return fetch().point;
     }
     /** Return a position that can be modified */
@@ -159,9 +148,8 @@ class Graph {
       return fetch().point;
     }
 
-    /** Return this node's index, a number in the range [0, graph_size). */
+    /** Return this node's index, a number in the range [0, graph_size()). */
     size_type index() const {
-      // HW0: YOUR CODE HERE
       return graph_->nodes[uid_].idx;
     }
 
@@ -170,7 +158,6 @@ class Graph {
      * Equal nodes have the same graph and the same index.
      */
     bool operator==(const Node& x) const {
-      // HW0: YOUR CODE HERE
       if (x.graph_ == graph_ && x.uid_ == uid_)
         return true;
       //(void) x;          // Quiet compiler warning
@@ -186,15 +173,11 @@ class Graph {
      * and y, exactly one of x == y, x < y, and y < x is true.
      */
     bool operator<(const Node& x) const {
-      // HW0: YOUR CODE HERE
       if (graph_ == x.graph_)
         return (uid_ < x.uid_);
       else
         return (graph_ < x.graph_);
     }
-
-    // HW1: YOUR CODE HERE
-    // Supply definitions AND SPECIFICATIONS for:
 
     /** Return the value associated with this Node
      *  For rvalue operations
@@ -236,10 +219,7 @@ class Graph {
    private:
     // Allow Graph to access Node's private member data and functions.
     friend class Graph;
-    // HW0: YOUR CODE HERE
-    // Use this space to declare private data members and methods for Node
-    // that will not be visible to users, but may be useful within Graph.
-    // i.e. Graph needs a way to construct valid Node objects
+    
     graph_type* graph_;  //pointer to the associated graph
     size_type uid_;      //uid of the node
     // a private constructor for graph to construct a Node instance
@@ -271,7 +251,6 @@ class Graph {
    * Complexity: O(1) amortized operations.
    */
   Node add_node(const Point& position, const node_value_type& value_in = node_value_type()) {
-    // HW0: YOUR CODE HERE
     internal_node new_node;
     new_node.uid = nodes.size();
     new_node.point = position;
@@ -294,7 +273,7 @@ class Graph {
    * If old has_node(@a n), then @a n becomes invalid, as do any
    * other Node objects equal to @a n. All other Node objects remain valid.
    *
-   * Complexity: Linear in size().
+   * Complexity: Linear in size()+the degree of its neighbors.
    */
 size_type remove_node(const Node& n){
   if (!has_node(n))
@@ -302,11 +281,14 @@ size_type remove_node(const Node& n){
   //clean up adjacency list
   for (size_type i : nodes[n.uid_].neighbors){
     size_type pos = 0;
+    //locate the position of n.uid_ in the adjacency list
     while(nodes[i].neighbors[pos] != n.uid_)
       ++pos;
+    //delete uid_ in adj list
     nodes[i].neighbors.erase(nodes[i].neighbors.begin()+pos);
     nodes[i].edgevalues.erase(nodes[i].edgevalues.begin()+pos);
   }
+  //update edge numbers
   edgesize_ -= nodes[n.uid_].neighbors.size();
   nodes[n.uid_].neighbors.clear();
   nodes[n.uid_].edgevalues.clear();
@@ -320,7 +302,18 @@ size_type remove_node(const Node& n){
   --size_;
   return 1;
 }
-
+/** Remove a node from the graph.
+   * @param[in] n_it Valid node_iterator
+   * @return node_iterator that points to its next element if remove succeeds
+       *itself if remove fails
+   *
+   * @post if remove succeeds new size() == old size() - 1.
+   *
+   * If old has_node(@a *n_it), then @a *n_it becomes invalid, as do any
+   * other Node objects equal to @a *n_it. All other Node objects remain valid.
+   *
+   * Complexity: Linear in size()+the degree of its neighbors.
+   */
 node_iterator remove_node(node_iterator n_it){
   remove_node(*n_it);
   return n_it;
@@ -332,7 +325,6 @@ node_iterator remove_node(node_iterator n_it){
    * Complexity: O(1).
    */
   bool has_node(const Node& n) const {
-    // HW1: YOUR CODE HERE
     if (n.uid_ >= nodes.size())
       return false;
     if (i2u[nodes[n.uid_].idx] == n.uid_)
@@ -350,7 +342,6 @@ node_iterator remove_node(node_iterator n_it){
    * Complexity: O(1).
    */
   Node node(size_type i) const {
-    // HW0: YOUR CODE HERE
     return Node(this, i2u[i]);
   }
 
@@ -368,12 +359,10 @@ node_iterator remove_node(node_iterator n_it){
    public:
     /** Construct an invalid Edge. */
     Edge() {
-      // HW0: YOUR CODE HERE
     }
 
     /** Return a node of this Edge */
     Node node1() const {
-      // HW0: YOUR CODE HERE
       // fetch the node index stored in the graph first
       // then fetch the node from graph
       return graph_->node(graph_->nodes[node1_].idx);      
@@ -382,7 +371,6 @@ node_iterator remove_node(node_iterator n_it){
 
     /** Return the other node of this Edge */
     Node node2() const {
-      // HW0: YOUR CODE HERE
       // fetch the node index stored in the graph first
       // then fetch the node from graph
       return graph_->node(graph_->nodes[node2_].idx);
@@ -398,7 +386,6 @@ node_iterator remove_node(node_iterator n_it){
      * Equal edges are from the same graph and have the same nodes.
      */
     bool operator==(const Edge& x) const {
-      // HW0: YOUR CODE HERE
       if (graph_ == x.graph_ && node1_ == x.node1_ && node2_ == x.node2_)
         return true;
       else if (graph_ == x.graph_ && node1_ == x.node2_ && node2_ == x.node1_)
@@ -415,7 +402,6 @@ node_iterator remove_node(node_iterator n_it){
      * and y, exactly one of x == y, x < y, and y < x is true.
      */
     bool operator<(const Edge& x) const {
-      // HW0: YOUR CODE HERE
       if (graph_ == x.graph_)
         return (node1_ < x.node1_);
       else
@@ -436,7 +422,6 @@ node_iterator remove_node(node_iterator n_it){
    private:
     // Allow Graph to access Edge's private member data and functions.
     friend class Graph;
-    // HW0: YOUR CODE HERE
     // Use this space to declare private data members and methods for Edge
     // that will not be visible to users, but may be useful within Graph.
     // i.e. Graph needs a way to construct valid Edge objects
@@ -458,7 +443,6 @@ node_iterator remove_node(node_iterator n_it){
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   size_type num_edges() const {
-    // HW0: YOUR CODE HERE
     return edgesize_;
   }
   /** Add an edge to the graph
@@ -467,7 +451,6 @@ node_iterator remove_node(node_iterator n_it){
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   Edge add_edge(const Node& a, const Node& b) {
-    // HW0: YOUR CODE HERE
     size_type node1_uid = a.uid_;
     size_type node2_uid = b.uid_;
     //check if edge exists
@@ -483,6 +466,7 @@ node_iterator remove_node(node_iterator n_it){
     nodes[node2_uid].neighbors.push_back(node1_uid);
     nodes[node2_uid].edgevalues.push_back(edges.size());
     edges.push_back(internal_edge());
+    //update edge size
     edgesize_++;
     if (node1_uid < node2_uid)
       return Edge(this, node1_uid, node2_uid);
@@ -491,13 +475,13 @@ node_iterator remove_node(node_iterator n_it){
   }
   /** Remove an edge from the graph.
    * @param[in] n1, n2 Nodes of the edge to be removed
-   * @return 1 if old has_node(n1, n2), 0 otherwise
+   * @return 1 if old has_edge(n1, n2), 0 otherwise
    *
    * @post new num_edges() == old num_edges() - result.
    *
    * Can invalidate outstanding iterators. 
-   * If old has_node(@a n1, @a n2), then @a e becomes invalid, as do any
-   * other Node objects equal to @a n. All other Node objects remain valid.
+   * If old has_edge(@a n1, @a n2), then @a e becomes invalid, as do any
+   * other Edge objects equal to @a e. All other Edge objects remain valid.
    *
    * Complexity: less than degree().
    */
@@ -520,15 +504,42 @@ node_iterator remove_node(node_iterator n_it){
     --edgesize_;
     return 1;
   } 
-
+  /** Remove an edge from the graph.
+   * @param[in] e Edge to be removed
+   * @return 1 if old has_edge(e.node1(), e.node2()), 0 otherwise
+   *
+   * @post new num_edges() == old num_edges() - result.
+   *
+   * Can invalidate outstanding iterators. 
+   * If old has_edge(@a e.node1(), @a e.node2()), then @a e becomes invalid, as do any
+   * other Edge objects equal to @a e. All other Edge objects remain valid.
+   *
+   * Complexity: less than degree().
+   */
   size_type remove_edge(const Edge& e)
   {
     return remove_edge(e.node1(), e.node1());
   }
 
+
+  /** Remove an edge from the graph.
+   * @param[in] e_it edge_iterator that points to the edge to be removed
+   * @return edge_iterator that points to the next edge if remove succeeds;
+       * edge_iterator that points to itself if otherwise
+   *
+   * @post new num_edges() == old num_edges() - result if remove succeeds
+   *
+   * Can invalidate outstanding iterators. 
+   * If old has_edge(@a (*e_it).node1(), @a (*e_it).node2()), then @a e becomes invalid, as do any
+   * other Edge objects equal to @a *e_it. All other Edge objects remain valid.
+   *
+   * Complexity: less than degree().
+   */
   edge_iterator remove_edge(edge_iterator e_it)
   {
     remove_edge(*e_it);
+    //if the last element in a row of adjacency list is removed
+    //call ++ to go to the next valid edge
     if (e_it.nbidx_ < nodes[e_it.node_].neighbors.size())
     {
       return e_it;
@@ -547,7 +558,6 @@ node_iterator remove_node(node_iterator n_it){
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   bool has_edge(const Node& a, const Node& b) const {
-    // HW1: YOUR CODE HERE
     size_type node1_uid = a.uid_;
     size_type node2_uid = b.uid_;
     //find Node b in the neighbors of Node a
@@ -563,31 +573,11 @@ node_iterator remove_node(node_iterator n_it){
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   Edge edge(size_type i) const {
-    // HW0: YOUR CODE HERE
-    unsigned int count = 0;  //the number of edges that has been iterated
-    i = i+1;
-    unsigned int j = 0;   //the current node 
-    unsigned int k = 0;   //the current index in neighbors
-    while(count < i){
-      if (k < nodes[j].neighbors.size() && nodes[j].neighbors[k] > j){
-        count++;
-      }
-      k++;
-      if (k >= nodes[j].neighbors.size()){
-        k = 0;
-        j++;
-      }
-    }
-    //a special case to deal with the last neighbor of a node
-    if (k == 0){
-      j--;
-      return Edge(this, j, nodes[j].neighbors.back());
-    }
-    else{
-      k--;
-      return Edge(this, j, nodes[j].neighbors[k]);
-    }
+    edge_iterator it = edge_begin();
+    for ( ; i != 0; --i) ++it;  // or:  std::advance(it, i);
+    return *it;
   }
+
 
   ///////////////
   // Iterators //
@@ -613,8 +603,6 @@ node_iterator remove_node(node_iterator n_it){
     NodeIterator() {
     }
 
-    // HW1 #2: YOUR CODE HERE
-    // Supply definitions AND SPECIFICATIONS for:
     
     //return the Node pointed by the interator
     Node operator*() const{
@@ -627,8 +615,7 @@ node_iterator remove_node(node_iterator n_it){
      *@post (*result).index() = uid_ + 1
      */
     NodeIterator& operator++(){
-      if (idx_ < graph_->i2u.size())
-        ++idx_;
+      ++idx_;
       return *this;
     }
     /*Test whether this node_iterator is the same as @a x
@@ -643,7 +630,6 @@ node_iterator remove_node(node_iterator n_it){
 
    private:
     friend class Graph;
-    // HW1 #2: YOUR CODE HERE
     graph_type* graph_;
     size_type idx_;
     
@@ -654,7 +640,6 @@ node_iterator remove_node(node_iterator n_it){
       }
   };
 
-  // HW1 #2: YOUR CODE HERE
   // Supply definitions AND SPECIFICATIONS for:
   /* Return the node_iterator that points to the first node of the graph
    * If size()==0, the returned iterator value shall not be dereferenced
@@ -694,7 +679,6 @@ node_iterator remove_node(node_iterator n_it){
     EdgeIterator() {
     }
 
-    // HW1 #3: YOUR CODE HERE
     // Supply definitions AND SPECIFICATIONS for:
 
     //return the Edge pointed by the interator
@@ -740,7 +724,6 @@ node_iterator remove_node(node_iterator n_it){
 
    private:
     friend class Graph;
-    // HW1 #3: YOUR CODE HERE
     graph_type* graph_;
     size_type node_;
     size_type nbidx_;
@@ -751,7 +734,6 @@ node_iterator remove_node(node_iterator n_it){
     
   };
 
-  // HW1 #3: YOUR CODE HERE
   // Supply definitions AND SPECIFICATIONS for:
   /* Return the edge_iterator that points to the first edge of the graph
    * If num_edges()==0, the returned iterator value shall not be dereferenced
@@ -798,7 +780,6 @@ node_iterator remove_node(node_iterator n_it){
     IncidentIterator() {
     }
 
-    // HW1 #5: YOUR CODE HERE
     // Supply definitions AND SPECIFICATIONS for:
     //return the Edge pointed by the incident_iterator
     //@post result.node1().index() = uid_;  result.node2().index()=idx_
@@ -814,13 +795,9 @@ node_iterator remove_node(node_iterator n_it){
      *@post result.idx_ = idx_ + 1
      *@post if (result != edge_end()) (*result).node1().index() == idx_
      */
-    IncidentIterator& operator++(){
-      if (idx_ == graph_->nodes[uid_].neighbors.size())
-        return *this;
-      else{
-        idx_++;
-        return *this;
-      }
+    IncidentIterator& operator++(){  
+      idx_++;
+      return *this;
     }
     /*Test whether this incident_iterator is the same as @a x
      * two incident_iterators are the same if they point to the 
@@ -832,7 +809,6 @@ node_iterator remove_node(node_iterator n_it){
 
    private:
     friend class Graph;
-    // HW1 #5: YOUR CODE HERE
     graph_type* graph_;
     size_type uid_;    //the uid of the Node that spawns the incident_iterator
     size_type idx_;    //the index of the edge pointing to
@@ -843,10 +819,6 @@ node_iterator remove_node(node_iterator n_it){
   };
 
  private:
-
-  // HW0: YOUR CODE HERE
-  // Use this space for your Graph class's internals:
-  //   helper functions, data members, and so forth.
   
   struct internal_node {
     Point point;
@@ -854,7 +826,9 @@ node_iterator remove_node(node_iterator n_it){
     size_type idx;  //index of a node
     std::vector<size_type> neighbors;   //the uid of adjacent nodes
     node_value_type value;        //the additional value stored in nodes
-    std::vector<size_type> edgevalues;  //the index that points to an element in edges
+    //the index that points to an element in edges
+    //this vector serves as storing the unique id of an edge
+    std::vector<size_type> edgevalues;  
   };
 
   struct internal_edge{
@@ -866,7 +840,8 @@ node_iterator remove_node(node_iterator n_it){
   std::vector<size_type> i2u;   //convert the uid to index for nodes
   size_type size_;
   size_type edgesize_;
-  std::vector<internal_edge> edges; //store edge information in graph
+  //store edge information in graph, the position is the unique id of an edge
+  std::vector<internal_edge> edges; 
 
 };
 

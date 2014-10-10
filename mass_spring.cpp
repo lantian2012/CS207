@@ -34,9 +34,6 @@ struct EdgeData{
 };
 
 
-
-// HW2 #1 YOUR CODE HERE
-// Define your Graph type
 typedef Graph<NodeData, EdgeData> GraphType;
 typedef typename GraphType::node_type Node;
 typedef typename GraphType::edge_type Edge;
@@ -163,7 +160,7 @@ double symp_euler_step(G& g, double t, double dt, F force) {
 }
 
 
-/** Force function object for HW2 #1. */
+//Force Function
 struct Problem1Force {
   /** Return the force being applied to @a n at time @a t.
    *
@@ -171,7 +168,6 @@ struct Problem1Force {
    * except that points at (0, 0, 0) and (1, 0, 0) never move. We can
    * model that by returning a zero-valued force. */
   Point operator()(Node n, double t) {
-    // HW2 #1: YOUR CODE HERE
     //constrain the corners
     if (n.position() == Point(0, 0, 0) || n.position() == Point(1, 0, 0))
       return Point(0, 0, 0);
@@ -277,7 +273,7 @@ int main(int argc, char** argv) {
       graph.add_edge(nodes[t[0]], nodes[t[1]]);
       graph.add_edge(nodes[t[0]], nodes[t[2]]);
 #if 1
-      // Diagonal edges: include as of HW2 #2
+      // Diagonal edges
       graph.add_edge(nodes[t[0]], nodes[t[3]]);
       graph.add_edge(nodes[t[1]], nodes[t[2]]);
 #endif
@@ -286,9 +282,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  // HW2 #1 YOUR CODE HERE
-  // Set initial conditions for your nodes, if necessary.
-  // Construct Forces/Constraints
+
   //set the mass and velocity of each Node
   for (auto it = graph.node_begin(); it != graph.node_end(); ++it){
     (*it).value().mass = float(1)/graph.size();
