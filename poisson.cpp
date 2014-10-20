@@ -134,69 +134,77 @@ struct zPosition {
 
 struct HeatColor{
   CS207:: Color operator() (GraphType::node_type node){
-    return CS207::Color::make_heat(1);
+    if (node.value().value < -1)
+      return CS207::Color::make_heat(1);
+    else if (node.value().value < 0)
+      return CS207::Color::make_heat(-node.value().value);
+    else if (node.value().value < 1)
+      return CS207::Color::make_heat(node.value().value);
+    else
+      return
+        CS207::Color::make_heat(1);
   }
 };
 
 
-   template <typename Real, typename PointFn, typename ColorFn>
-   class visual_iteration : public itl::basic_iteration<Real> 
+template <typename Real, typename PointFn, typename ColorFn>
+class visual_iteration : public itl::basic_iteration<Real> 
+{
+   typedef itl::basic_iteration<Real> super;
+   typedef visual_iteration self;
+ public:
+
+   template <class Vector>
+   visual_iteration(GraphType* graph, CS207::SDLViewer* viewer, mtl::dense_vector<double>* x, const Vector& r0, int max_iter_, Real tol_, Real atol_ = Real(0), int cycle_ = 100)
+     : super(r0, max_iter_, tol_, atol_), cycle(cycle_), last_print(-1), g_(graph), viewer_(viewer), x_(x)
    {
-       typedef itl::basic_iteration<Real> super;
-       typedef visual_iteration self;
-     public:
+   }
    
-       template <class Vector>
-       visual_iteration(GraphType* graph, CS207::SDLViewer* viewer, mtl::dense_vector<double>* x, const Vector& r0, int max_iter_, Real tol_, Real atol_ = Real(0), int cycle_ = 100)
-         : super(r0, max_iter_, tol_, atol_), cycle(cycle_), last_print(-1), g_(graph), viewer_(viewer), x_(x)
-       {
+
+   bool finished() { return super::finished(); }
+
+   template <typename T>
+   bool finished(const T& r) 
+   {
+       bool ret= super::finished(r);
+       for (auto it = g_->node_begin(); it != g_->node_end(); ++it){
+        (*it).value().value = (*x_)[(*it).index()];
        }
-       
+       auto node_map = viewer_->empty_node_map(*g_);
+       viewer_->clear();
+       viewer_->add_nodes(g_->node_begin(), g_->node_end(), ColorFn(), PointFn(), node_map);
+       viewer_->add_edges(g_->edge_begin(), g_->edge_end(), node_map);
+       return ret;
+   }
 
-       bool finished() { return super::finished(); }
+   inline self& operator++() { ++this->i; return *this; }
+   
+   inline self& operator+=(int n) { this->i+= n; return *this; }
 
-       template <typename T>
-       bool finished(const T& r) 
-       {
-           bool ret= super::finished(r);
-           for (auto it = g_->node_begin(); it != g_->node_end(); ++it){
-            (*it).value().value = (*x_)[(*it).index()];
-           }
-           auto node_map = viewer_->empty_node_map(*g_);
-           viewer_->clear();
-           viewer_->add_nodes(g_->node_begin(), g_->node_end(), ColorFn(), PointFn(), node_map);
-           viewer_->add_edges(g_->edge_begin(), g_->edge_end(), node_map);
-           return ret;
-       }
+   operator int() const { return error_code(); }
 
-       inline self& operator++() { ++this->i; return *this; }
-       
-       inline self& operator+=(int n) { this->i+= n; return *this; }
+   bool is_multi_print() const { return multi_print; }
 
-       operator int() const { return error_code(); }
+   void set_multi_print(bool m) { multi_print= m; }
 
-       bool is_multi_print() const { return multi_print; }
-
-       void set_multi_print(bool m) { multi_print= m; }
-
-       int error_code() const 
-       {
-           if (!this->my_suppress)
-               std::cout << "finished! error code = " << this->error << '\n'
-                   << this->iterations() << " iterations\n"
-                   << this->resid() << " is actual final residual. \n"
-                   << this->relresid() << " is actual relative tolerance achieved. \n"
-                   << "Relative tol: " << this->rtol_ << "  Absolute tol: " << this->atol_ << '\n'
-                   << "Convergence:  " << pow(this->relresid(), 1.0 / double(this->iterations())) << std::endl;
-           return this->error;
-       }
-     protected:
-       int        cycle, last_print;
-       GraphType* g_;
-       bool       multi_print = false;
-       CS207::SDLViewer* viewer_;
-       mtl::dense_vector<double>* x_;
-   };
+   int error_code() const 
+   {
+       if (!this->my_suppress)
+           std::cout << "finished! error code = " << this->error << '\n'
+               << this->iterations() << " iterations\n"
+               << this->resid() << " is actual final residual. \n"
+               << this->relresid() << " is actual relative tolerance achieved. \n"
+               << "Relative tol: " << this->rtol_ << "  Absolute tol: " << this->atol_ << '\n'
+               << "Convergence:  " << pow(this->relresid(), 1.0 / double(this->iterations())) << std::endl;
+       return this->error;
+   }
+ protected:
+   int        cycle, last_print;
+   GraphType* g_;
+   bool       multi_print = false;
+   CS207::SDLViewer* viewer_;
+   mtl::dense_vector<double>* x_;
+};
 
 
 int main(int argc, char** argv)
@@ -247,6 +255,8 @@ int main(int argc, char** argv)
       if (norm_inf(n.position()) == 1)
         return 0;
       else if ((norm_inf(n.position()-Point(0.6, 0.6, 0)) < 0.2) || (norm_inf(n.position()-Point(-0.6, -0.6, 0)) < 0.2))
+        return -0.2;
+      else if ((norm_inf(n.position()-Point(0.6, -0.6, 0)) < 0.2) || (norm_inf(n.position()-Point(-0.6, 0.6, 0)) < 0.2))
         return -0.2;
       else if (BoundingBox(Point(-0.6,-0.2,-1), Point(0.6,0.2,1)).contains(n.position()))
         return 1;
