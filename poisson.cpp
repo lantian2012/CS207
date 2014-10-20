@@ -17,13 +17,92 @@
 #include "Graph.hpp"
 #include "Point.hpp"
 #include "BoundingBox.hpp"
+#include "math.h"
+#include <boost/numeric/mtl/mtl.hpp>
+#include <boost/numeric/itl/itl.hpp>
 
+
+struct NodeData
+{
+  double value;
+  bool onBoundary;
+};
+
+typedef Graph<NodeData,double> GraphType;  //<  DUMMY Placeholder
 
 // HW3: YOUR CODE HERE
 // Define a GraphSymmetricMatrix that maps
 // your Graph concept to MTL's Matrix concept. This shouldn't need to copy or
 // modify Graph at all!
-typedef Graph<char,char> GraphType;  //<  DUMMY Placeholder
+class GraphSymmetricMatrix
+{
+public:
+  GraphSymmetricMatrix(GraphType* graph):g_(graph) {}
+
+  template <typename VectorIn, typename VectorOut, typename Assign>
+  void mult(const VectorIn& v, VectorOut& w, Assign) const{
+    for (auto it = g_->node_begin(); it != g_->node_end(); ++it)
+    {
+      unsigned int i = (*it).index();
+      double sum = 0;
+      if ((*it).value().onBoundary){
+        sum = v[i];
+      }
+      else{
+        for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
+          if (!(*j).node2().value().onBoundary){
+            sum += v[(*j).node2().index()];
+          }
+        }
+        sum -= (*it).degree() * v[i];
+      }
+      Assign::apply(w[i], sum);
+    }
+  }
+
+  template <typename Vector>
+  mtl::vec::mat_cvec_multiplier<GraphSymmetricMatrix, Vector> operator*(const Vector& v) const {
+    return mtl::vec::mat_cvec_multiplier<GraphSymmetricMatrix, Vector>(*this, v);
+  }
+  unsigned int size() const{
+    return g_->size();
+  }
+
+private:
+  GraphType* g_;
+};
+/** The number of elements in the matrix*/
+inline std::size_t size(const GraphSymmetricMatrix& A){
+  return A.size()*A.size();
+}
+/** The number of rows in the matrix*/
+inline std::size_t num_rows(const GraphSymmetricMatrix& A){
+  return A.size();
+}
+/** The number of columns in the matrix*/
+inline std::size_t num_cols(const GraphSymmetricMatrix& A){
+  return A.size();
+}
+namespace mtl{
+namespace ashape{
+  /**Define GraphSymmetricMatrix to be a non-svalar type*/
+template<>
+struct ashape_aux<GraphSymmetricMatrix>
+{
+  typedef nonscal type;
+};
+}
+
+/**  GraphSymmetricMatrix implements the Collection concept
+ *  with value_type and size_type*/
+template<>
+struct Collection<GraphSymmetricMatrix>
+{
+  typedef double value_type;
+  typedef unsigned size_type;
+};
+}
+
 
 /** Remove all the nodes in graph @a g whose posiiton is contained within
  * BoundingBox @a bb
@@ -32,10 +111,92 @@ typedef Graph<char,char> GraphType;  //<  DUMMY Placeholder
  */
 void remove_box(GraphType& g, const BoundingBox& bb) {
   // HW3: YOUR CODE HERE
-  (void) g; (void) bb;   //< Quiet compiler
+  auto it = g.node_begin();
+  while (it != g.node_end()){
+    if (bb.contains((*it).position()))
+    {
+      g.remove_node(it);
+    }
+    else
+      ++it;
+  }
   return;
 }
 
+struct zPosition {
+  template <typename NODE>
+  Point operator()(const NODE& node) {
+    Point pos = node.position();
+    pos.elem[2] = node.value().value;
+    return pos;
+  }
+};
+
+struct HeatColor{
+  CS207:: Color operator() (GraphType::node_type node){
+    return CS207::Color::make_heat(1);
+  }
+};
+
+
+   template <typename Real, typename PointFn, typename ColorFn>
+   class visual_iteration : public itl::basic_iteration<Real> 
+   {
+       typedef itl::basic_iteration<Real> super;
+       typedef visual_iteration self;
+     public:
+   
+       template <class Vector>
+       visual_iteration(GraphType* graph, CS207::SDLViewer* viewer, mtl::dense_vector<double>* x, const Vector& r0, int max_iter_, Real tol_, Real atol_ = Real(0), int cycle_ = 100)
+         : super(r0, max_iter_, tol_, atol_), cycle(cycle_), last_print(-1), g_(graph), viewer_(viewer), x_(x)
+       {
+       }
+       
+
+       bool finished() { return super::finished(); }
+
+       template <typename T>
+       bool finished(const T& r) 
+       {
+           bool ret= super::finished(r);
+           for (auto it = g_->node_begin(); it != g_->node_end(); ++it){
+            (*it).value().value = (*x_)[(*it).index()];
+           }
+           auto node_map = viewer_->empty_node_map(*g_);
+           viewer_->clear();
+           viewer_->add_nodes(g_->node_begin(), g_->node_end(), ColorFn(), PointFn(), node_map);
+           viewer_->add_edges(g_->edge_begin(), g_->edge_end(), node_map);
+           return ret;
+       }
+
+       inline self& operator++() { ++this->i; return *this; }
+       
+       inline self& operator+=(int n) { this->i+= n; return *this; }
+
+       operator int() const { return error_code(); }
+
+       bool is_multi_print() const { return multi_print; }
+
+       void set_multi_print(bool m) { multi_print= m; }
+
+       int error_code() const 
+       {
+           if (!this->my_suppress)
+               std::cout << "finished! error code = " << this->error << '\n'
+                   << this->iterations() << " iterations\n"
+                   << this->resid() << " is actual final residual. \n"
+                   << this->relresid() << " is actual relative tolerance achieved. \n"
+                   << "Relative tol: " << this->rtol_ << "  Absolute tol: " << this->atol_ << '\n'
+                   << "Convergence:  " << pow(this->relresid(), 1.0 / double(this->iterations())) << std::endl;
+           return this->error;
+       }
+     protected:
+       int        cycle, last_print;
+       GraphType* g_;
+       bool       multi_print = false;
+       CS207::SDLViewer* viewer_;
+       mtl::dense_vector<double>* x_;
+   };
 
 
 int main(int argc, char** argv)
@@ -80,8 +241,71 @@ int main(int argc, char** argv)
 
   // HW3: YOUR CODE HERE
   // Define b using the graph, f, and g.
+  class Boundary{
+  public:
+    double operator() (GraphType::node_type n){
+      if (norm_inf(n.position()) == 1)
+        return 0;
+      else if ((norm_inf(n.position()-Point(0.6, 0.6, 0)) < 0.2) || (norm_inf(n.position()-Point(-0.6, -0.6, 0)) < 0.2))
+        return -0.2;
+      else if (BoundingBox(Point(-0.6,-0.2,-1), Point(0.6,0.2,1)).contains(n.position()))
+        return 1;
+      else
+        return -10;  //A marker to tell a node is NOT on the boundary
+    }
+  };
+
+  class Force{
+  public:
+    double operator() (GraphType::node_type n){
+      return 5*cos(norm_1(n.position()));
+    }
+  };
+  Boundary g;
+  Force f;
+  mtl::dense_vector<double> b(graph.size());
+
+  graph.setFlag<Boundary>(g);
+
+  for (auto it = graph.node_begin(); it != graph.node_end(); ++it){
+    if ((*it).value().onBoundary)
+      b[(*it).index()] = g(*it);
+    else{
+      b[(*it).index()] = h*h*f(*it);
+      for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
+        if ((*j).node2().value().onBoundary)
+          b[(*it).index()] -= g((*j).node2());
+      }
+    }
+  }
+
+
+
   // Construct the GraphSymmetricMatrix A using the graph
+  GraphSymmetricMatrix A(&graph);
+  // Launch the SDLViewer
+  CS207::SDLViewer viewer;
+  auto node_map = viewer.empty_node_map(graph);
+  viewer.launch();
+
+  viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
+  viewer.add_edges(graph.edge_begin(), graph.edge_end(), node_map);
+
+  viewer.center_view();
   // Solve Au = b using MTL.
+  itl::pc::identity<GraphSymmetricMatrix> P(A);
+  //itl::cyclic_iteration<double> iter(b, 1000, 1.e-10, 0.0, 50);
+  mtl::dense_vector<double> x(graph.size(), 0.0);
+  visual_iteration<double, zPosition, HeatColor> iter(&graph, &viewer, &x, b, 1000, 1.e-10, 0.0, 5);
+  
+  cg(A, x, b, P, iter);
 
   return 0;
 }
+
+
+
+
+
+
+

@@ -345,6 +345,17 @@ node_iterator remove_node(node_iterator n_it){
     return Node(this, i2u[i]);
   }
 
+
+  template<typename G>
+  void setFlag(G g){
+    for (auto it = node_begin(); it != node_end(); ++it){
+      if (g(*it) >-2)
+        (*it).value().onBoundary = true;
+      else
+        (*it).value().onBoundary = false;
+    }
+  }
+
   /////////////////
   // GRAPH EDGES //
   /////////////////

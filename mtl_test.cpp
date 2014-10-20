@@ -12,7 +12,9 @@
 
 struct IdentityMatrix
 {
-	IdentityMatrix(unsigned int col):num_rows_(col), num_cols_(col){}
+	IdentityMatrix(unsigned int col):num_rows_(col), num_cols_(col){
+		size_ = num_rows_*num_cols_;
+	}
 
 	/** Helper function to perform multiplication. Allows for delayed
 	 * evaluation of results.
@@ -30,21 +32,28 @@ struct IdentityMatrix
 	mtl::vec::mat_cvec_multiplier<IdentityMatrix, Vector> operator*(const Vector& v) const {
 		return mtl::vec::mat_cvec_multiplier<IdentityMatrix, Vector>(*this, v);
 	}
+	unsigned int size(){
+		return size_;
+	}
+	unsigned int num_rows(){
+		return num_rows_;
+	}
+private:
 	unsigned int size_;
 	unsigned int num_rows_;
 	unsigned int num_cols_;
 };
 /** The number of elements in the matrix*/
 inline std::size_t size(const IdentityMatrix& A){
-	return A.size_;
+	return A.size();
 }
 /** The number of rows in the matrix*/
 inline std::size_t num_rows(const IdentityMatrix& A){
-	return A.num_rows_;
+	return A.num_rows();
 }
 /** The number of columns in the matrix*/
 inline std::size_t num_cols(const IdentityMatrix& A){
-	return A.num_cols_;
+	return A.num_rows();
 }
 
 
