@@ -24,46 +24,53 @@
 
 struct NodeData
 {
-  double value;
-  bool onBoundary;
+  double value;   //The value assocaited with the node. value = u(x), x is the node
+  bool onBoundary;  //flag true if the node is on boundary
 };
 
-typedef Graph<NodeData,double> GraphType;  //<  DUMMY Placeholder
+typedef Graph<NodeData,double> GraphType;
 
-// HW3: YOUR CODE HERE
+
 // Define a GraphSymmetricMatrix that maps
-// your Graph concept to MTL's Matrix concept. This shouldn't need to copy or
-// modify Graph at all!
+// your Graph concept to MTL's Matrix concept.
+// GraphSymmetricMatrix implements a discrete Laplace operator
+
 class GraphSymmetricMatrix
 {
 public:
   GraphSymmetricMatrix(GraphType* graph):g_(graph) {}
 
+  /** Helper function to perform multiplication. Allows for delayed
+   * evaluation of results.
+   * Assign::apply(a, b) resolves to an assignment operation such as * a += b, a -= b, or a = b.
+   * @pre @a size(v) == g_->size() */
   template <typename VectorIn, typename VectorOut, typename Assign>
   void mult(const VectorIn& v, VectorOut& w, Assign) const{
     for (auto it = g_->node_begin(); it != g_->node_end(); ++it)
     {
       unsigned int i = (*it).index();
       double sum = 0;
+      // if i on boundary, A[i, i] = 1. A[i, j] = 0. i != j
       if ((*it).value().onBoundary){
         sum = v[i];
       }
       else{
         for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
           if (!(*j).node2().value().onBoundary){
-            sum += v[(*j).node2().index()];
+            sum += v[(*j).node2().index()]; // A[i, j] = 1 when neiter i or j is on boundary, i!= j
           }
         }
-        sum -= (*it).degree() * v[i];
+        sum -= (*it).degree() * v[i];  //A[i, i] = -deg(ni) when i is not on boundary
       }
       Assign::apply(w[i], sum);
     }
   }
-
+  /** Matrix - vector multiplication forwards to MTL ’s lazy mat_cvec_multiplier operator */
   template <typename Vector>
   mtl::vec::mat_cvec_multiplier<GraphSymmetricMatrix, Vector> operator*(const Vector& v) const {
     return mtl::vec::mat_cvec_multiplier<GraphSymmetricMatrix, Vector>(*this, v);
   }
+  //get the number of rows of the matrix
   unsigned int size() const{
     return g_->size();
   }
@@ -83,6 +90,8 @@ inline std::size_t num_rows(const GraphSymmetricMatrix& A){
 inline std::size_t num_cols(const GraphSymmetricMatrix& A){
   return A.size();
 }
+
+/** Traits that MTL uses to determine properties of our IdentityMatrix . */
 namespace mtl{
 namespace ashape{
   /**Define GraphSymmetricMatrix to be a non-svalar type*/
@@ -91,7 +100,7 @@ struct ashape_aux<GraphSymmetricMatrix>
 {
   typedef nonscal type;
 };
-}
+}  //end namespace ashape
 
 /**  GraphSymmetricMatrix implements the Collection concept
  *  with value_type and size_type*/
@@ -101,7 +110,7 @@ struct Collection<GraphSymmetricMatrix>
   typedef double value_type;
   typedef unsigned size_type;
 };
-}
+}//end namesapce mtl
 
 
 /** Remove all the nodes in graph @a g whose posiiton is contained within
@@ -110,7 +119,6 @@ struct Collection<GraphSymmetricMatrix>
  *        not bb.contains(g.node(i).position())
  */
 void remove_box(GraphType& g, const BoundingBox& bb) {
-  // HW3: YOUR CODE HERE
   auto it = g.node_begin();
   while (it != g.node_end()){
     if (bb.contains((*it).position()))
@@ -123,6 +131,10 @@ void remove_box(GraphType& g, const BoundingBox& bb) {
   return;
 }
 
+/* Fuctor that maps a node to a point to show its value
+ * @pre Node().value().value must be a double
+ * zPosition(Node n) = (n.x, n.y, n.value)
+ */
 struct zPosition {
   template <typename NODE>
   Point operator()(const NODE& node) {
@@ -132,6 +144,7 @@ struct zPosition {
   }
 };
 
+//Color functor that maps the value in a node to a color
 struct HeatColor{
   CS207:: Color operator() (GraphType::node_type node){
     if (node.value().value < -1)
@@ -148,15 +161,15 @@ struct HeatColor{
 
 
 template <typename Real, typename PointFn, typename ColorFn>
-class visual_iteration : public itl::basic_iteration<Real> 
+class visual_iteration : public itl::cyclic_iteration<Real> 
 {
-   typedef itl::basic_iteration<Real> super;
+   typedef itl::cyclic_iteration<Real> super;
    typedef visual_iteration self;
  public:
 
    template <class Vector>
    visual_iteration(GraphType* graph, CS207::SDLViewer* viewer, mtl::dense_vector<double>* x, const Vector& r0, int max_iter_, Real tol_, Real atol_ = Real(0), int cycle_ = 100)
-     : super(r0, max_iter_, tol_, atol_), cycle(cycle_), last_print(-1), g_(graph), viewer_(viewer), x_(x)
+     : super(r0, max_iter_, tol_, atol_, cycle_), g_(graph), viewer_(viewer), x_(x)
    {
    }
    
@@ -166,44 +179,23 @@ class visual_iteration : public itl::basic_iteration<Real>
    template <typename T>
    bool finished(const T& r) 
    {
+       //finish the work in the base class
        bool ret= super::finished(r);
+       //use the current solve to update the value in each node
        for (auto it = g_->node_begin(); it != g_->node_end(); ++it){
         (*it).value().value = (*x_)[(*it).index()];
        }
+       //update the viewer
        auto node_map = viewer_->empty_node_map(*g_);
        viewer_->clear();
        viewer_->add_nodes(g_->node_begin(), g_->node_end(), ColorFn(), PointFn(), node_map);
        viewer_->add_edges(g_->edge_begin(), g_->edge_end(), node_map);
        return ret;
    }
-
-   inline self& operator++() { ++this->i; return *this; }
-   
-   inline self& operator+=(int n) { this->i+= n; return *this; }
-
-   operator int() const { return error_code(); }
-
-   bool is_multi_print() const { return multi_print; }
-
-   void set_multi_print(bool m) { multi_print= m; }
-
-   int error_code() const 
-   {
-       if (!this->my_suppress)
-           std::cout << "finished! error code = " << this->error << '\n'
-               << this->iterations() << " iterations\n"
-               << this->resid() << " is actual final residual. \n"
-               << this->relresid() << " is actual relative tolerance achieved. \n"
-               << "Relative tol: " << this->rtol_ << "  Absolute tol: " << this->atol_ << '\n'
-               << "Convergence:  " << pow(this->relresid(), 1.0 / double(this->iterations())) << std::endl;
-       return this->error;
-   }
  protected:
-   int        cycle, last_print;
-   GraphType* g_;
-   bool       multi_print = false;
-   CS207::SDLViewer* viewer_;
-   mtl::dense_vector<double>* x_;
+   GraphType* g_;   //pointer to the graph it is being plotted
+   CS207::SDLViewer* viewer_;  //pointer to the viewer it is plotting
+   mtl::dense_vector<double>* x_;  //pointer the solve after each update
 };
 
 
@@ -247,8 +239,12 @@ int main(int argc, char** argv)
   remove_box(graph, BoundingBox(Point( 0.4+h, 0.4+h,-1), Point( 0.8-h, 0.8-h,1)));
   remove_box(graph, BoundingBox(Point(-0.6+h,-0.2+h,-1), Point( 0.6-h, 0.2-h,1)));
 
-  // HW3: YOUR CODE HERE
+
   // Define b using the graph, f, and g.
+
+  //boundary condition
+  //check if a node is on the boundary
+  //set the value for nodes that are on the boundary
   class Boundary{
   public:
     double operator() (GraphType::node_type n){
@@ -265,21 +261,29 @@ int main(int argc, char** argv)
     }
   };
 
+  //Forcing function in the Poisson equation
   class Force{
   public:
     double operator() (GraphType::node_type n){
       return 5*cos(norm_1(n.position()));
     }
   };
+
+  // boundary condition(g), force(f) and b in the Poisson equation
   Boundary g;
   Force f;
   mtl::dense_vector<double> b(graph.size());
 
+  // check if a node is on the boundary
   graph.setFlag<Boundary>(g);
 
+  //set the b
   for (auto it = graph.node_begin(); it != graph.node_end(); ++it){
+    // bi = g(xi) if node i is on the boundary
     if ((*it).value().onBoundary)
       b[(*it).index()] = g(*it);
+    // bi = h^2*f(xi)-sum(g(xj)) for all adjacent nodes j that are on the boundary
+    // h is the length of edges
     else{
       b[(*it).index()] = h*h*f(*it);
       for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
@@ -304,7 +308,6 @@ int main(int argc, char** argv)
   viewer.center_view();
   // Solve Au = b using MTL.
   itl::pc::identity<GraphSymmetricMatrix> P(A);
-  //itl::cyclic_iteration<double> iter(b, 1000, 1.e-10, 0.0, 50);
   mtl::dense_vector<double> x(graph.size(), 0.0);
   visual_iteration<double, zPosition, HeatColor> iter(&graph, &viewer, &x, b, 1000, 1.e-10, 0.0, 5);
   
@@ -312,10 +315,5 @@ int main(int argc, char** argv)
 
   return 0;
 }
-
-
-
-
-
 
 

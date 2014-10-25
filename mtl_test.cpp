@@ -3,11 +3,10 @@
  * Test script for interfacing with MTL4 and it's linear solvers.
  */
 
-// HW3: Need to install/include Boost and MTL in Makefile
 #include <boost/numeric/mtl/mtl.hpp>
 #include <boost/numeric/itl/itl.hpp>
 
-// HW3: YOUR CODE HERE
+
 // Define a IdentityMatrix that interfaces with MTL
 
 struct IdentityMatrix
@@ -28,14 +27,15 @@ struct IdentityMatrix
 		}
 	}
 
+	/** Matrix - vector multiplication forwards to MTL ’s lazy mat_cvec_multiplier operator */
 	template <typename Vector>
 	mtl::vec::mat_cvec_multiplier<IdentityMatrix, Vector> operator*(const Vector& v) const {
 		return mtl::vec::mat_cvec_multiplier<IdentityMatrix, Vector>(*this, v);
 	}
-	unsigned int size(){
+	unsigned int size() const {
 		return size_;
 	}
-	unsigned int num_rows(){
+	unsigned int num_rows() const{
 		return num_rows_;
 	}
 private:
@@ -56,7 +56,7 @@ inline std::size_t num_cols(const IdentityMatrix& A){
 	return A.num_rows();
 }
 
-
+/** Traits that MTL uses to determine properties of our IdentityMatrix . */
 namespace mtl{
 namespace ashape{
 	/**Define IdentityMatrix to be a non-svalar type*/
@@ -65,7 +65,7 @@ struct ashape_aux<IdentityMatrix>
 {
 	typedef nonscal type;
 };
-}
+} //end namespace ashape
 
 /**  IdentityMatrix implements the Collection concept
  *  with value_type and size_type*/
@@ -75,7 +75,7 @@ struct Collection<IdentityMatrix>
 	typedef double value_type;
 	typedef unsigned size_type;
 };
-}
+} //end namesapce mtl
 
 
 int main()
@@ -85,12 +85,21 @@ int main()
 	// using MTL's conjugate gradient solver
 	const unsigned int N=15;
 	IdentityMatrix I(N);
-	itl::pc::identity<IdentityMatrix>            P(I);
-    mtl::dense_vector<double>                 x(N, 2.7), b(N);
+
+	// Create a preconditioner
+	itl::pc::identity<IdentityMatrix> P(I);
+
+	// Set the b such that x==2.7 is the solution
+    mtl::dense_vector<double> x(N, 2.7), b(N);
     b = I * x;
-    x= 0;
-    itl::cyclic_iteration<double>             iter(b, 100, 1.e-11, 0.0, 5);
+
+    // start with x=0
+    x = 0;
+
+    itl::cyclic_iteration<double> iter(b, 100, 1.e-11, 0.0, 5);
+    
     cg(I, x, b, P, iter);
+    //output the solve
     std::cout<<x<<std::endl;
     return 0;
 }
