@@ -392,6 +392,8 @@ node_iterator remove_node(node_iterator n_it){
       return norm(diff);
     }
 
+
+
     /** Test whether this edge and @a x are equal.
      *
      * Equal edges are from the same graph and have the same nodes.
@@ -429,6 +431,10 @@ node_iterator remove_node(node_iterator n_it){
       return graph_->edges[graph_->nodes[x_].edgevalues[y_]].value;
     }
 
+    size_type index() const{
+      return uid_;
+    }
+
 
    private:
     // Allow Graph to access Edge's private member data and functions.
@@ -441,10 +447,11 @@ node_iterator remove_node(node_iterator n_it){
     size_type node2_;      //the uid of node 2
     size_type x_;  //the position in adjacency list 
     size_type y_;  //the position in adjacency list
+    size_type uid_; //the unique id of the edge
     
     //private constructor for graph to construct edge instance
-    Edge(const graph_type* graph, size_type node1, size_type node2)
-      : graph_(const_cast<graph_type*>(graph)), node1_(node1), node2_(node2){
+    Edge(const graph_type* graph, size_type node1, size_type node2, size_type uid)
+      : graph_(const_cast<graph_type*>(graph)), node1_(node1), node2_(node2), uid_(uid){
       }
 
   };
@@ -466,10 +473,10 @@ node_iterator remove_node(node_iterator n_it){
     size_type node2_uid = b.uid_;
     //check if edge exists
     if (has_edge(a, b)){
-      if (node1_uid < node2_uid)
-        return Edge(this, node1_uid, node2_uid);
-      else
-        return Edge(this, node2_uid, node1_uid);
+      size_type i = 0;
+      while(nodes[node1_uid].neighbors[i] != node2_uid)
+        ++i;
+      return Edge(this, node1_uid, node2_uid, nodes[node1_uid].edgevalues[i]);
     }
     //if not, add a new edge
     nodes[node1_uid].neighbors.push_back(node2_uid);
@@ -480,9 +487,9 @@ node_iterator remove_node(node_iterator n_it){
     //update edge size
     edgesize_++;
     if (node1_uid < node2_uid)
-      return Edge(this, node1_uid, node2_uid);
+      return Edge(this, node1_uid, node2_uid, edges.size()-1);
     else
-      return Edge(this, node2_uid, node1_uid);
+      return Edge(this, node2_uid, node1_uid, edges.size()-1);
   }
   /** Remove an edge from the graph.
    * @param[in] n1, n2 Nodes of the edge to be removed
@@ -694,7 +701,8 @@ node_iterator remove_node(node_iterator n_it){
 
     //return the Edge pointed by the interator
     Edge operator*() const{
-      Edge edge = Edge(graph_, node_, graph_->nodes[node_].neighbors[nbidx_]);
+      Edge edge = Edge(graph_, node_, graph_->nodes[node_].neighbors[nbidx_]
+        , graph_->nodes[node_].edgevalues[nbidx_]);
       edge.x_ = node_;
       edge.y_ = nbidx_;
       return edge;
@@ -795,7 +803,8 @@ node_iterator remove_node(node_iterator n_it){
     //return the Edge pointed by the incident_iterator
     //@post result.node1().index() = uid_;  result.node2().index()=idx_
     Edge operator*() const{
-      Edge edge = Edge(graph_, uid_, graph_->nodes[uid_].neighbors[idx_]);
+      Edge edge = Edge(graph_, uid_, graph_->nodes[uid_].neighbors[idx_],
+        graph_->nodes[uid_].edgevalues[idx_]);
       edge.x_ = uid_;
       edge.y_ = idx_;
       return edge;
