@@ -60,12 +60,12 @@ class Mesh {
 
   /** Return the number of nodes in the mesh. */
   size_type num_nodes() const {
-    return graph_->num_nodes();
+    return graph_.num_nodes();
   }
 
   /** Return the number of edges in the mesh. */
   size_type num_edges() const {
-    return graph_->num_edges();
+    return graph_.num_edges();
   }
 
   /** Return the number of triangles in the mesh. */
@@ -85,8 +85,8 @@ class Mesh {
      * Complexity = O(1)
      */
     Node node(size_type i) {
-      size_type node_uid = mesh->tri_vec[uid_].nodes[i];
-      return mesh_->graph_->node(node_uid);
+      size_type node_uid = mesh_->tri_vec[uid_].nodes[i];
+      return mesh_->graph_.node(node_uid);
     }
     /**Access the first node of the triangle
      * @pre 0<=i<3
@@ -94,27 +94,27 @@ class Mesh {
      * Complexity = O(1)
      */
     Edge edge(size_type i) {
-      size_type edge_uid = mesh->tri_vec[uid_].edges[i];
-      return mesh_->graph_->edge(edge_uid);
+      size_type edge_uid = mesh_->tri_vec[uid_].edges[i];
+      return mesh_->graph_.edge(edge_uid);
     }
 
     /**return the area of this triangle
      *Comlexity = O(1)
      */
     double area() const{
-      double x0 = mesh->tri_vec[uid_].nodes[0].position().x;
-      double y0 = mesh->tri_vec[uid_].nodes[0].position().y;
-      double x1 = mesh->tri_vec[uid_].nodes[1].position().x;
-      double y1 = mesh->tri_vec[uid_].nodes[1].position().y;
-      double x2 = mesh->tri_vec[uid_].nodes[2].position().x;
-      double y2 = mesh->tri_vec[uid_].nodes[2].position().y;
-      return (x1*y2+x2*y3+x3*y1-x2*y1-x3*y2-x1*y3)/2;
+      double x0 = mesh_->tri_vec[uid_].nodes[0].position().x;
+      double y0 = mesh_->tri_vec[uid_].nodes[0].position().y;
+      double x1 = mesh_->tri_vec[uid_].nodes[1].position().x;
+      double y1 = mesh_->tri_vec[uid_].nodes[1].position().y;
+      double x2 = mesh_->tri_vec[uid_].nodes[2].position().x;
+      double y2 = mesh_->tri_vec[uid_].nodes[2].position().y;
+      return (x0*y1+x1*y2+x2*y0-x1*y0-x2*y1-x0*y2)/2;
     }
     /**Access the Q of the triangle
      *Complexity = O(1)
      */
     QVar Q(){
-      return mesh->tri_vec[uid_].Q;
+      return mesh_->tri_vec[uid_].Q;
     }
     /**return the index of the triangle
      *Complexity = O(1)
@@ -127,14 +127,14 @@ class Mesh {
         *that is opposite to node i
       */
     Point normal(size_type i){
-      return mesh->tri_vec[uid_].n[i];
+      return mesh_->tri_vec[uid_].n[i];
     }
 
     /**return the flux of the edge
         *that is opposite to node i
       */
     QVar F(size_type i){
-      return mesh->tri_vec[uid_].F[i];
+      return mesh_->tri_vec[uid_].F[i];
     }
 
 
