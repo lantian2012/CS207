@@ -102,13 +102,7 @@ class Mesh {
      *Comlexity = O(1)
      */
     double area() const{
-      double x0 = mesh_->tri_vec[uid_].nodes[0].position().x;
-      double y0 = mesh_->tri_vec[uid_].nodes[0].position().y;
-      double x1 = mesh_->tri_vec[uid_].nodes[1].position().x;
-      double y1 = mesh_->tri_vec[uid_].nodes[1].position().y;
-      double x2 = mesh_->tri_vec[uid_].nodes[2].position().x;
-      double y2 = mesh_->tri_vec[uid_].nodes[2].position().y;
-      return (x0*y1+x1*y2+x2*y0-x1*y0-x2*y1-x0*y2)/2;
+      return mesh_->tri_vec[uid_].area;
     }
     /**Access the Q of the triangle
      *Complexity = O(1)
@@ -164,7 +158,7 @@ class Mesh {
   private:
     friend class Mesh;
     Triangle(Mesh* mesh, size_type uid):
-      mesh_(mesh), uid_(uid) {}
+      uid_(uid), mesh_(mesh) {}
     size_type uid_;
     Mesh* mesh_;
   };
@@ -189,49 +183,62 @@ class Mesh {
   Triangle add_triangle(const Node& a, const Node& b, const Node& c){
     T new_triangle;
     //add edge in graph
-    graph_.add_edge(a, b);
+    Edge edge0 = graph_.add_edge(a, b);
     new_triangle.nodes[0] = c.index();
+    new_triangle.edges[0] = edge0.index();
+    Edge edge1 = graph_.add_edge(b, c);
+    new_triangle.nodes[1] = a.index();
+    new_triangle.edges[1] = edge1.index();
+    Edge edge2 = graph_.add_edge(a, c);
+    new_triangle.nodes[2] = b.index();
+    new_triangle.edges[2] = edge2.index();    
+    double xa = a.position().x;
+    double ya = a.position().y;
+    double xb = b.position().x;
+    double yb = b.position().y;
+    double xc = c.position().x;
+    double yc = c.position().y;
+    new_triangle.area = (xa*yb+xb*yc+xc*ya-xb*ya-xc*yb-xa*yc)/2;
 
-    //calculate normal for new edges
-    //update triangle id in edge data
-    //pushback triange data
-    (void) a, b, c;
-    return Triangle();
+    Point p = a.position() - b.position(); 
+    double nx = p.y;
+    double ny = 0-p.x;
+    // check if it is in the right direction
+    Point checkp = c.position() - a.position();
+    // check direction, if wrong, flip it. & adjust length to be equal to |e|
+    if(nx*checkp.x + ny*checkp.y>0) {
+      nx = -nx;
+      ny = -ny;
+    }  
+    new_triangle.n.push_back(Point(nx, ny, 0));
+    p = b.position() - c.position(); 
+    nx = p.y;
+    ny = 0-p.x;
+    
+    // check if it is in the right direction
+    checkp = a.position() - b.position();
+    // check direction, if wrong, flip it. & adjust length to be equal to |e|
+    if(nx*checkp.x + ny*checkp.y>0) {
+      nx = -nx;
+      ny = -ny;
+    }  
+    
+    new_triangle.n.push_back(Point(nx, ny, 0));     
+    p = a.position() - c.position(); 
+    nx = p.y;
+    ny = 0-p.x;
+    // check if it is in the right direction
+    checkp = b.position() - a.position();
+    // check direction, if wrong, flip it. & adjust length to be equal to |e|
+    if(nx*checkp.x + ny*checkp.y>0) {
+      nx = -nx;
+      ny = -ny;
+    }  
+    new_triangle.n.push_back(Point(nx, ny, 0));
+      
+    tri_vec.push_back(new_triangle);
+    return Triangle(this,tri_vec.size()-1);
   }
-/*
-Edge add_edge(const Node& a, const Node& b) {
-    size_type node1_uid = a.uid_;
-    size_type node2_uid = b.uid_;
-    //check if edge exists
-    if (has_edge(a, b)){
-      if (node1_uid < node2_uid)
-        return Edge(this, node1_uid, node2_uid);
-      else
-        return Edge(this, node2_uid, node1_uid);
-    }
-    //if not, add a new edge
-    nodes[node1_uid].neighbors.push_back(node2_uid);
-    nodes[node1_uid].edgevalues.push_back(edges.size());
-    nodes[node2_uid].neighbors.push_back(node1_uid);
-    nodes[node2_uid].edgevalues.push_back(edges.size());
-    edges.push_back(internal_edge());
-    //update edge size
-    edgesize_++;
-    if (node1_uid < node2_uid)
-      return Edge(this, node1_uid, node2_uid);
-    else
-      return Edge(this, node2_uid, node1_uid);
-  }
-*/
-
-
-
-
-
-
-
-
-
 
   /** Determine if this Triangle belongs to this Graph
     * @return True if @a t is currently a Triangle of this Graph
