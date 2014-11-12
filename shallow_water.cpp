@@ -19,30 +19,38 @@
 
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
+typedef unsigned size_type;
 
-/** Water column characteristics */
-struct QVar {
-  double h;   // Height of column
-  double hx;  // Height times average x velocity of column
-  double hy;  // Height times average y velocity of column
-
-  /** Default constructor.
-   *
-   * A default water column is 1 unit high with no velocity. */
-  QVar()
-      : h(1), hx(0), hy(0) {
-  }
-  /** Construct the given water column. */
-  QVar(double h_, double hx_, double hy_)
-      : h(h_), hx(hx_), hy(hy_) {
-  }
-  // More operators?
-};
 
 // HW4B: Placeholder for Mesh Type!
 // Define NodeData, EdgeData, TriData, etc
 // or redefine for your particular Mesh
-typedef Mesh<int,int,int> MeshType;
+
+struct NodeData
+{
+  QVar Q;
+};
+struct EdgeData
+{
+  size_type triange1;
+  size_type triange2;
+};
+
+/** @struct Mesh::TriData
+   * information associated with triangles
+   */    
+struct TriData{
+  std::vector<size_type> nodes; //a vector storing the uids of the three nodes of this triangle
+  std::vector<size_type> edges; //a vector storing the uids of the three edges of this triangle
+  QVar Q;  //Qk: the average value of Q inside this triangle
+  double area;  //the area of this triangle
+  std::vector<QVar> F; //The transition over an edge
+  std::vector<Point> n; //The unit normal vector of 3 edges
+  /**construct an invalid TriData*/
+  TriData(): nodes(3,0),edges(3,0),Q(QVar()),area(-1){
+  }
+};
+typedef Mesh<NodeData,EdgeData,TriData> MeshType;
 
 
 /** Function object for calculating shallow-water flux.
