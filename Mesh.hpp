@@ -172,8 +172,7 @@ class Mesh {
    * Complexity: O(1)
    */
   Node add_node(const Point& position, const N& value_in = N()) {
-    (void) position, value_in;
-    return Node();
+    return graph_.add_node(position, value_in);
   }
 
   /** Add an triangle to the graph
@@ -183,7 +182,11 @@ class Mesh {
    * Complexity: O(d) d is the degree of a node
    */
   Triangle add_triangle(const Node& a, const Node& b, const Node& c){
+    T new_triangle;
     //add edge in graph
+    graph_.add_edge(a, b);
+    new_triangle.nodes[0] = c.index();
+
     //calculate normal for new edges
     //update triangle id in edge data
     //pushback triange data
