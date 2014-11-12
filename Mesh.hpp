@@ -292,7 +292,7 @@ class Mesh {
      * @post return.uid_ = t_
      */
     Triangle operator*() const{
-      return Triangle();
+      return mesh_->triangle(t_);
     }
 
     /* return the IncidentIterator_Node that points to the
