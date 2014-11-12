@@ -247,8 +247,7 @@ class Mesh {
     */
   bool has_triangle(const Triangle& t){
     //compare the trigraph_ and uid_
-    (void) t;
-    return false;
+    return ((t.graph_ != this->graph_) && (t.uid_ < tri_vec.size()));   
   }
 
     /** Return the triangle with index @a i.
@@ -257,8 +256,8 @@ class Mesh {
      * Complexity: O(1).
      */
   Triangle triange(size_type i){
-    (void) i;
-    return Triangle();
+    assert(i<tri_vec.size());
+    return Triangle(this,i);
   }
   
   /** Return the first triangle adjacent to the input edge.
@@ -268,8 +267,7 @@ class Mesh {
      * Complexity: O(1).
      */
   Triangle triangle1(const Edge& e){
-    (void) e;
-    return Triangle();
+    return Triangle(this,graph_.edges[e.index()].triangle1);
   }
 
   /** Return the second triangle adjacent to the input edge.
@@ -279,8 +277,7 @@ class Mesh {
      * Complexity: O(1).
      */
   Triangle triangle2(const Edge& e){
-    (void) e;
-    return Triangle();
+    return Triangle(this,graph_.edges[e.index()].triangle2);
   }
 
 
