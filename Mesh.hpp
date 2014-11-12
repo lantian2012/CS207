@@ -60,54 +60,61 @@ class Mesh {
 
   /** Return the number of nodes in the mesh. */
   size_type num_nodes() const {
-    return 0;
+    return graph_.num_nodes();
   }
 
   /** Return the number of edges in the mesh. */
   size_type num_edges() const {
-    return 0;
+    return graph_.num_edges();
   }
 
   /** Return the number of triangles in the mesh. */
   size_type num_triangles() const {
-    return 0;
+    return tri_vec.size();
   }
 
   class Triangle
   {
   public:
     /**construc an invalid triangle*/
-    Triangle(){}
+    Triangle(){
+    }
     /**Access the i node of the triangle
      * @pre 0<=i<3
      * @post result.index() == mesh_->tri_vec[uid_].nodes[i]
      * Complexity = O(1)
      */
     Node node(size_type i) {
-      (void) i;
-      return Node();
+      size_type node_uid = mesh_->tri_vec[uid_].nodes[i];
+      return mesh_->graph_.node(node_uid);
     }
     /**Access the first node of the triangle
      * @pre 0<=i<3
      * @post result.index() == mesh_->tri_vec[uid_].edges[i]
      * Complexity = O(1)
      */
-    Node edge(size_type i) {
-      (void) i;
-      return Edge();
+    Edge edge(size_type i) {
+      size_type edge_uid = mesh_->tri_vec[uid_].edges[i];
+      return mesh_->graph_.edge(edge_uid);
     }
 
     /**return the area of this triangle
      *Comlexity = O(1)
      */
     double area() const{
-      return 0;
+      double x0 = mesh_->tri_vec[uid_].nodes[0].position().x;
+      double y0 = mesh_->tri_vec[uid_].nodes[0].position().y;
+      double x1 = mesh_->tri_vec[uid_].nodes[1].position().x;
+      double y1 = mesh_->tri_vec[uid_].nodes[1].position().y;
+      double x2 = mesh_->tri_vec[uid_].nodes[2].position().x;
+      double y2 = mesh_->tri_vec[uid_].nodes[2].position().y;
+      return (x0*y1+x1*y2+x2*y0-x1*y0-x2*y1-x0*y2)/2;
     }
     /**Access the Q of the triangle
      *Complexity = O(1)
      */
     QVar Q(){
-      return QVar();
+      return mesh_->tri_vec[uid_].Q;
     }
     /**return the index of the triangle
      *Complexity = O(1)
@@ -120,16 +127,14 @@ class Mesh {
         *that is opposite to node i
       */
     Point normal(size_type i){
-      (void) i;
-      return Point();
+      return mesh_->tri_vec[uid_].n[i];
     }
 
     /**return the flux of the edge
         *that is opposite to node i
       */
     QVar F(size_type i){
-      (void) i;
-      return QVar();
+      return mesh_->tri_vec[uid_].F[i];
     }
 
 
@@ -193,6 +198,40 @@ class Mesh {
     (void) a, b, c;
     return Triangle();
   }
+/*
+Edge add_edge(const Node& a, const Node& b) {
+    size_type node1_uid = a.uid_;
+    size_type node2_uid = b.uid_;
+    //check if edge exists
+    if (has_edge(a, b)){
+      if (node1_uid < node2_uid)
+        return Edge(this, node1_uid, node2_uid);
+      else
+        return Edge(this, node2_uid, node1_uid);
+    }
+    //if not, add a new edge
+    nodes[node1_uid].neighbors.push_back(node2_uid);
+    nodes[node1_uid].edgevalues.push_back(edges.size());
+    nodes[node2_uid].neighbors.push_back(node1_uid);
+    nodes[node2_uid].edgevalues.push_back(edges.size());
+    edges.push_back(internal_edge());
+    //update edge size
+    edgesize_++;
+    if (node1_uid < node2_uid)
+      return Edge(this, node1_uid, node2_uid);
+    else
+      return Edge(this, node2_uid, node1_uid);
+  }
+*/
+
+
+
+
+
+
+
+
+
 
   /** Determine if this Triangle belongs to this Graph
     * @return True if @a t is currently a Triangle of this Graph
