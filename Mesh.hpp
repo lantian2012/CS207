@@ -42,6 +42,12 @@ struct QVar {
     hy *= b;
     return *this;
   }
+  QVar& operator/=(double b) {
+    h /= b;
+    hx /= b;
+    hy /= b;
+    return *this;
+  }
 
 };
 
@@ -60,7 +66,9 @@ QVar operator*(QVar a, double b) {
 QVar operator*(double b, QVar a) {
   return a *= b;
 }
-
+QVar operator/(QVar a, double b) {
+  return a /= b;
+}
 /** @class Mesh
  * @brief A template for 3D triangular meshes.
  *

@@ -48,7 +48,7 @@ struct TriData{
   std::vector<QVar> F; //The transition over an edge
   std::vector<Point> n; //The unit normal vector of 3 edges
   /**construct an invalid TriData*/
-  TriData(): nodes(3,0),edges(3,0),Q(QVar()),area(-1){
+  TriData(): nodes(3,0),edges(3,0),Q(QVar()),area(-1), F(3,QVar(0,0,0)){
   }
 };
 typedef Mesh<NodeData,EdgeData,TriData> MeshType;
@@ -102,7 +102,7 @@ struct NodePosition {
   Point operator()(const NODE& n) {
     // HW4B: You may change this to plot something other than the
     // positions of the nodes
-    return n.position();
+    return Point(n.position().x, n.position().y, n.value().Q.h);
   }
 };
 
@@ -119,22 +119,37 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   // Compute all fluxes. (before updating any triangle Q_bars)
   // For each triangle, update Q_bar using the fluxes as in Equation 8.
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
-  /*
+  
   for(auto i = m.edge_begin(); i != m.edge_end(); ++i){
-    MeshType::Triangle trik = m.triangle((*i).value().triangle1);
-    MeshType::Triangle trim = m.triangle((*i).value().triangle2);
-    unsigned int edge_k = 0;
-    unsigned int edge_m = 0;
-    //end which edge (*i) is in trik and trim
-    while(trik.node(edge_k).index()== (*i).node1().index() 
-      || trik.node(edge_k).index()== (*i).node2().index() )
-      ++edge_k;
-    while(trim.node(edge_m).index()== (*i).node1().index() 
-      || trim.node(edge_m).index()== (*i).node2().index() )
-      ++edge_m;
-    QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), trim.Q());
-    trik.F(edge_k) = flux;
-    trim.F(edge_m) = -flux;
+    if ((*i).value().triangle1 != (unsigned) -1 && (*i).value().triangle2 != (unsigned) -1 ){
+      MeshType::Triangle trik = m.triangle((*i).value().triangle1);
+      MeshType::Triangle trim = m.triangle((*i).value().triangle2);
+      unsigned int edge_k = 0;
+      unsigned int edge_m = 0;
+      //which edge (*i) is in trik and trim
+      while(trik.node(edge_k).index()== (*i).node1().index() 
+        || trik.node(edge_k).index()== (*i).node2().index() )
+        ++edge_k;
+      while(trim.node(edge_m).index()== (*i).node1().index() 
+        || trim.node(edge_m).index()== (*i).node2().index() )
+        ++edge_m;
+      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), trim.Q());
+      trik.F(edge_k) = flux;
+      trim.F(edge_m) = -flux;
+    }
+    else{
+      MeshType::Triangle trik;
+      if ((*i).value().triangle1 != (unsigned) -1)
+        trik = m.triangle((*i).value().triangle1);
+      else
+        trik = m.triangle((*i).value().triangle2);
+      unsigned int edge_k = 0;
+      while(trik.node(edge_k).index()== (*i).node1().index() 
+        || trik.node(edge_k).index()== (*i).node2().index() )
+        ++edge_k;
+      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), QVar(trik.Q().h, 0, 0));
+      trik.F(edge_k) = flux;
+    }
   }
 
   for(auto i = m.triangle_begin(); i != m.triangle_end(); ++i){
@@ -143,8 +158,7 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
       sum += (*i).F(j);
     }
     (*i).Q() = (*i).Q()-dt/(*i).area()*sum;
-  }*/
-  (void) m; (void) f;
+  }
   return t + dt;
 }
 
@@ -154,7 +168,17 @@ void post_process(MESH& m) {
   // HW4B: Post-processing step
   // Translate the triangle-averaged values to node-averaged values
   // Implement Equation 9 from your pseudocode here
-  (void) m;
+
+  
+  for (auto it = m.node_begin(); it != m.node_end(); ++it){
+    double sumarea=0;
+    QVar sumQ = QVar(0, 0, 0);
+    for(auto j = m.triangle_begin(*it); j != m.triangle_end(*it); ++j){
+      sumarea += (*j).area();
+      sumQ += (*j).Q() * (*j).area();
+    }
+    (*it).value().Q = sumQ/sumarea;
+  }
 }
 
 
