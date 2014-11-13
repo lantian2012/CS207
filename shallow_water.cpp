@@ -36,7 +36,7 @@ struct EdgeData
 {
   size_type triangle1;
   size_type triangle2;
-  EdgeData():triangle1(-1),triangle2(-1){}
+  EdgeData():triangle1(-1), triangle2(-1){}
 };
 
 /** @struct Mesh::TriData
@@ -50,7 +50,7 @@ struct TriData{
   std::vector<QVar> F; //The transition over an edge
   std::vector<Point> n; //The unit normal vector of 3 edges
   /**construct an invalid TriData*/
-  TriData(): nodes(3,0),edges(3,0),Q(QVar()),area(-1){
+  TriData(): nodes(3,0),edges(3,0),Q(QVar()),area(-1), F(3,QVar(0,0,0)){
   }
 };
 typedef Mesh<NodeData,EdgeData,TriData> MeshType;
@@ -122,13 +122,13 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   // Compute all fluxes. (before updating any triangle Q_bars)
   // For each triangle, update Q_bar using the fluxes as in Equation 8.
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
-
+  
   // Implement Equation 7 from your pseudocode here.
   for (auto it=m.triangle_begin(); it!=m.triangle_end(); ++it) {
     QVar temp_sum = QVar(0.0,0.0,0.0);
     int j=0;
     for (auto init = (*it).triangle_begin(); init!=(*it).triangle_end(); ++init) {  
-        if((*init).index() !=-1){                         
+        if((*init).index() !=unsigned(-1)){                         
           QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), (*init).Q());
           temp *= dt;
           temp /= (*it).area();
@@ -136,7 +136,6 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
         }
         else{
           QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), QVar((*it).Q().h,0.0,0.0));
-          std::cout<<"QVar((*it).Q().h===="<<(*it).Q().h<<std::endl;
           temp *= dt;
           temp /= (*it).area();
           temp_sum += temp;
@@ -146,8 +145,53 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
     (*it).Q() -= temp_sum;
   }
   return t + dt;
-  (void) m; (void) f;
-  return t + dt;
+  
+
+  
+  /*
+  for(auto i = m.edge_begin(); i != m.edge_end(); ++i){
+    if ((*i).value().triangle1 != (unsigned) -1 && (*i).value().triangle2 != (unsigned) -1 ){
+      MeshType::Triangle trik = m.triangle((*i).value().triangle1);
+      MeshType::Triangle trim = m.triangle((*i).value().triangle2);
+      unsigned int edge_k = 0;
+      unsigned int edge_m = 0;
+      //which edge (*i) is in trik and trim
+      while(trik.node(edge_k).index()== (*i).node1().index() 
+        || trik.node(edge_k).index()== (*i).node2().index() )
+        ++edge_k;
+      while(trim.node(edge_m).index()== (*i).node1().index() 
+        || trim.node(edge_m).index()== (*i).node2().index() )
+        ++edge_m;
+      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), trim.Q());
+      trik.F(edge_k) = flux;
+      trim.F(edge_m) = -flux;
+    }
+    else{
+      MeshType::Triangle trik;
+      if ((*i).value().triangle1 != (unsigned) -1)
+        trik = m.triangle((*i).value().triangle1);
+      else
+        trik = m.triangle((*i).value().triangle2);
+      unsigned int edge_k = 0;
+      while(trik.node(edge_k).index()== (*i).node1().index() 
+        || trik.node(edge_k).index()== (*i).node2().index() )
+        ++edge_k;
+      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), QVar(trik.Q().h, 0, 0));
+      trik.F(edge_k) = flux;
+    }
+  }
+
+  for(auto i = m.triangle_begin(); i != m.triangle_end(); ++i){
+    QVar sum = QVar(0, 0, 0);
+    for (int j = 0; j < 3; ++j){
+      sum += (*i).F(j);
+    }
+    //std::cout<<"tbefore=="<<(*i).Q().h<<" "<<(*i).Q().hx<<" "<<(*i).Q().hy<<" "<<std::endl;
+    (*i).Q() = (*i).Q()-dt/(*i).area()*sum;
+    //std::cout<<"tafter=="<<(*i).Q().h<<" "<<(*i).Q().hx<<" "<<(*i).Q().hy<<" "<<std::endl;
+  }
+  
+  return t + dt;*/
 };
 
 /** Convert the triangle-averaged values to node-averaged values for viewing. */
@@ -156,20 +200,18 @@ void post_process(MESH& m) {
   // HW4B: Post-processing step
   // Translate the triangle-averaged values to node-averaged values
   // Implement Equation 9 from your pseudocode here
-  for (auto it=m.node_begin(); it!=m.node_end(); ++it) {
-    double total_area = 0.0;
-    //(*it).value().Q= QVar(0.0, 0.0, 0.0);
-    for (auto iit=m.triangle_begin(*it); iit!=m.triangle_end(*it); ++iit) {
-      total_area += (*iit).area();
-      QVar temp = (*iit).Q();
-      temp *= (*iit).area();
-      (*it).value().Q += temp;
-    }
-    (*it).value().Q /= total_area;
-  }
-  (void) m;
-};
 
+  
+  for (auto it = m.node_begin(); it != m.node_end(); ++it){
+    double sumarea=0;
+    QVar sumQ = QVar(0, 0, 0);
+    for(auto j = m.triangle_begin(*it); j != m.triangle_end(*it); ++j){
+      sumarea += (*j).area();
+      sumQ += (*j).Q() * (*j).area();
+    }
+    (*it).value().Q = sumQ/sumarea;
+  }
+};
 
 
 int main(int argc, char* argv[])
@@ -203,7 +245,6 @@ int main(int argc, char* argv[])
     // HW4B: Need to implement add_triangle before this can be used!
 #if 1
     mesh.add_triangle(mesh_node[t[0]], mesh_node[t[1]], mesh_node[t[2]]);
-   
 #endif
   }
 
@@ -216,10 +257,41 @@ int main(int argc, char* argv[])
   // Set the initial conditions
   // Perform any needed precomputation
 
-  for (auto it=mesh.node_begin(); it!=mesh.node_end(); ++it) {
+  // Case 1: pebble being thrown in a pond
+  /*for (auto it=mesh.node_begin(); it!=mesh.node_end(); ++it) {
     (*it).value().Q = QVar(0.0,0.0,0.0);
     (*it).value().Q.h = 1.0-0.75*exp(-80.0*(pow(((*it).position().x-0.75),2)+pow((*it).position().y,2)));
+  }*/
+  
+  
+  
+  // Case 2: a large column of water
+  for (auto it=mesh.node_begin(); it!=mesh.node_end(); ++it) {
+    (*it).value().Q = QVar(0.0,0.0,0.0);
+    double temp = ((pow(((*it).position().x-0.75),2)+pow((*it).position().y,2))-pow(0.15,2));
+    if (temp < 0) {
+      (*it).value().Q.h = 1.0+0.75;
+    }
+    else {
+      (*it).value().Q.h = 1.0;
+    }
   }
+
+
+/*
+  // Case 3: a dam break
+  for (auto it=mesh.node_begin(); it!=mesh.node_end(); ++it) {
+    (*it).value().Q = QVar(0.0,0.0,0.0);
+    if ((*it).position().x < 0) {
+      (*it).value().Q.h = 1.0+0.75;
+    }
+    else {
+      (*it).value().Q.h = 1.0;
+    }
+  }*/
+
+
+
   // Set triangle values
   for (auto it=mesh.triangle_begin(); it!=mesh.triangle_end(); ++it) {
     (*it).Q() = QVar(0.0,0.0,0.0);
@@ -273,10 +345,11 @@ int main(int argc, char* argv[])
   double dt = 0.1;
 #endif
   double t_start = 0;
-  double t_end = 0.1;
+  double t_end = 10;
 
   // Preconstruct a Flux functor
   EdgeFluxCalculator f;
+
   // Begin the time stepping
   for (double t = t_start; t < t_end; t += dt) {
     // Step forward in time with forward Euler
