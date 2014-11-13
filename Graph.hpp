@@ -476,7 +476,10 @@ node_iterator remove_node(node_iterator n_it){
       size_type i = 0;
       while(nodes[node1_uid].neighbors[i] != node2_uid)
         ++i;
-      return Edge(this, node1_uid, node2_uid, nodes[node1_uid].edgevalues[i]);
+      Edge result = Edge(this, node1_uid, node2_uid, nodes[node1_uid].edgevalues[i]);
+      result.x_ = node1_uid;
+      result.y_ = i;
+      return result;
     }
     //if not, add a new edge
     nodes[node1_uid].neighbors.push_back(node2_uid);
@@ -486,10 +489,10 @@ node_iterator remove_node(node_iterator n_it){
     edges.push_back(internal_edge());
     //update edge size
     edgesize_++;
-    if (node1_uid < node2_uid)
-      return Edge(this, node1_uid, node2_uid, edges.size()-1);
-    else
-      return Edge(this, node2_uid, node1_uid, edges.size()-1);
+    Edge result = Edge(this, node1_uid, node2_uid, edges.size()-1);
+    result.x_ = node1_uid;
+    result.y_ = nodes[node1_uid].neighbors.size()-1;
+    return result;
   }
   /** Remove an edge from the graph.
    * @param[in] n1, n2 Nodes of the edge to be removed

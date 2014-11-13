@@ -183,13 +183,15 @@ class Mesh {
   Triangle add_triangle(const Node& a, const Node& b, const Node& c){
     T new_triangle;
     //add edge in graph
-    Edge edge0 = graph_.add_edge(a, b);
+    Edge edge0 = graph_.add_edge(a, b);    
     new_triangle.nodes[0] = c.index();
     new_triangle.edges[0] = edge0.index();
-    Edge edge1 = graph_.add_edge(b, c);
+    
+    Edge edge1 = graph_.add_edge(b, c);    
     new_triangle.nodes[1] = a.index();
     new_triangle.edges[1] = edge1.index();
-    Edge edge2 = graph_.add_edge(a, c);
+    
+    Edge edge2 = graph_.add_edge(a, c);    
     new_triangle.nodes[2] = b.index();
     new_triangle.edges[2] = edge2.index();    
     double xa = a.position().x;
@@ -237,6 +239,21 @@ class Mesh {
     new_triangle.n.push_back(Point(nx, ny, 0));
       
     tri_vec.push_back(new_triangle);
+    
+    if(edge0.value().triangle1 ==-1)
+      edge0.value().triangle1 = tri_vec.size()-1;
+    else
+      edge0.value().triangle2 = tri_vec.size()-1;
+    if(edge1.value().triangle1 ==-1)
+      edge1.value().triangle1 = tri_vec.size()-1;
+    else
+      edge1.value().triangle2 = tri_vec.size()-1;
+    if(edge2.value().triangle1 ==-1)
+      edge2.value().triangle1 = tri_vec.size()-1;
+    else
+      edge2.value().triangle2 = tri_vec.size()-1;
+      
+   
     return Triangle(this,tri_vec.size()-1);
   }
 
@@ -479,16 +496,14 @@ class Mesh {
        *Complexity = O(1)
        */
       Triangle operator*() const{
-        // size_type edge_uid = mesh_->edges[incident_i];
-        // pair<size_type,size_type> pair = graph_->get_edge_value(edge_uid);
-        // size_type t_uid;
-        // if(F_triange1 == triangle_uid)
-        //   t_uid = F_triange2;
-        // else
-        //   t_uid = F_triange1;
-        // return Triangle(mesh_,t_uid);
-
-        return Triangle();
+        size_type e_uid = mesh_->tri_vec[triangle_uid].edges[incident_i];
+        Edge e = mesh_->graph_.edge(e_uid);
+        if(e.value().triangle1 == triangle_uid)
+          return Triangle(mesh_,e.value().triangle2);
+        else if(e.value().triangle2 == triangle_uid)
+          return Triangle(mesh_,e.value().triangle1);
+        else 
+          return Triangle();
       }
 
       /*return the IncidentIterator_Triangle that points to the next incident edge
@@ -499,21 +514,21 @@ class Mesh {
        *Complexity = O(1)
        */
       IncidentIterator_Triangle& operator++(){
-        return IncidentIterator_Triangle();
+        incident_i++;
+        return *this;
       }
 
         /*return true if the two triangles are same and false if not
          *@param[in] x, reference to a triangle 
        *@pre @a x.uid_ >=0
        *@pre triangle_uid >=0
-       *@post result==true if @a x.uid_ == this->triangle_uid
-       *@post result==false if @a x.uid_ != this->triangle_uid
+       *@post result==true if @a x.uid_ == this->triangle_uid  &&  @a x.mesh_ == this->mesh_
+       *@post result==false if @a x.uid_ != this->triangle_uid ||  @a x.mesh_ != this->mesh_
        *
        *Complexity = O(1)
        */
       bool operator==(const IncidentIterator_Triangle& x) const{
-        (void) x;
-        return false;
+        return((x.uid_ == this->triangle_uid)  &&  (x.mesh_ == this->mesh_));
       }
   private:
     
