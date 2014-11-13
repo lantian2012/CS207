@@ -24,7 +24,42 @@ struct QVar {
       : h(h_), hx(hx_), hy(hy_) {
   }
   // More operators?
+  QVar& operator+=(const QVar& b) {
+    h += b.h;
+    hx += b.hx;
+    hy += b.hy;
+    return *this;
+  }
+  QVar& operator-=(const QVar& b) {
+    h -= b.h;
+    hx -= b.hx;
+    hy -= b.hy;
+    return *this;
+  }
+  QVar& operator*=(double b) {
+    h *= b;
+    hx *= b;
+    hy *= b;
+    return *this;
+  }
+
 };
+
+QVar operator-(const QVar& a) {
+  return QVar(-a.h, -a.hx, -a.hy);
+}
+QVar operator+(QVar a, const QVar& b) {
+  return a += b;
+}
+QVar operator-(QVar a, const QVar& b) {
+  return a -= b;
+}
+QVar operator*(QVar a, double b) {
+  return a *= b;
+}
+QVar operator*(double b, QVar a) {
+  return a *= b;
+}
 
 /** @class Mesh
  * @brief A template for 3D triangular meshes.
@@ -107,7 +142,7 @@ class Mesh {
     /**Access the Q of the triangle
      *Complexity = O(1)
      */
-    QVar Q(){
+    QVar& Q(){
       return mesh_->tri_vec[uid_].Q;
     }
     /**return the index of the triangle
@@ -127,7 +162,7 @@ class Mesh {
     /**return the flux of the edge
         *that is opposite to node i
       */
-    QVar F(size_type i){
+    QVar& F(size_type i){
       return mesh_->tri_vec[uid_].F[i];
     }
 
@@ -240,15 +275,15 @@ class Mesh {
       
     tri_vec.push_back(new_triangle);
     
-    if(edge0.value().triangle1 ==-1)
+    if(edge0.value().triangle1 == unsigned(-1))
       edge0.value().triangle1 = tri_vec.size()-1;
     else
       edge0.value().triangle2 = tri_vec.size()-1;
-    if(edge1.value().triangle1 ==-1)
+    if(edge1.value().triangle1 == unsigned(-1))
       edge1.value().triangle1 = tri_vec.size()-1;
     else
       edge1.value().triangle2 = tri_vec.size()-1;
-    if(edge2.value().triangle1 ==-1)
+    if(edge2.value().triangle1 == unsigned(-1))
       edge2.value().triangle1 = tri_vec.size()-1;
     else
       edge2.value().triangle2 = tri_vec.size()-1;
@@ -272,7 +307,7 @@ class Mesh {
      * @post result.index() == i
      * Complexity: O(1).
      */
-  Triangle triange(size_type i){
+  Triangle triangle(size_type i){
     assert(i<tri_vec.size());
     return Triangle(this,i);
   }
@@ -328,7 +363,7 @@ class Mesh {
 
 
   //Iterator that iterates through the adjacent triangle of a node
-  class IncidentIterator_Node
+  class IncidentIterator_Node:private totally_ordered<IncidentIterator_Node>
   {
   public:
     // These type definitions help us use STL's iterator_traits.
@@ -384,7 +419,7 @@ class Mesh {
           ++i;
         if (old.edge(i).value().triangle1 == -1 || old.edge(i).value().triangle2 == -1){
           if (t2_ == -1)
-            t_ == -1;
+            t_ = -1;
           else{
             t_ = t2_;
             t2_ = -1;
@@ -421,7 +456,7 @@ class Mesh {
     size_type init_; //the uid of the other node of the first edge
 
     /** Construct a valid IncidentIterator_Node*/
-    IncidentIterator_Node( const Mesh* m, size_type n, size_type t, size_type t2, size_type last, size_type init): mesh_(m),n_(n),t_(t),t2_(t2),last_(last),init_(init){
+    IncidentIterator_Node(const Mesh* m, size_type n, size_type t, size_type t2, size_type last, size_type init): mesh_(const_cast<Mesh*>(m)),n_(n),t_(t),t2_(t2),last_(last),init_(init){
     }
   };
 
@@ -435,12 +470,13 @@ class Mesh {
    * @post result.last_ == result.first_
    */
   IncidentIterator_Node triangle_begin(Node n){
-    Edge start = *n.edge_begin();
+    Edge start = *(n.edge_begin());
     size_type othernode;
     if (start.node1().index() == n.index())
       othernode = start.node2().index();
     else
       othernode = start.node1().index();
+    std::cout<<start.value().triangle1<<start.value().triangle2<<std::endl;
     return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
       start.value().triangle2, othernode, othernode);
   }
@@ -541,6 +577,56 @@ class Mesh {
         IncidentIterator_Triangle(const Mesh* m, size_type uid, size_type i): mesh_(const_cast<Mesh*>(m)),triangle_uid(uid),incident_i(i){
       }
   };
+
+  class TriangleIterator: private totally_ordered<TriangleIterator>{
+  public:
+
+    // These type definitions help us use STL's iterator_traits.
+    /** Element type. */
+    typedef Triangle value_type;
+    /** Type of pointers to elements. */
+    typedef Triangle* pointer;
+    /** Type of references to elements. */
+    typedef Triangle& reference;
+    /** Iterator category. */
+    typedef std::input_iterator_tag iterator_category;
+    /** Difference between iterators */
+    typedef std::ptrdiff_t difference_type;
+
+    TriangleIterator(){}
+
+    Triangle operator*() const{
+      return mesh_->triangle(idx_);
+    }
+
+    TriangleIterator& operator++(){
+      ++idx_;
+      return *this;
+    }
+
+    bool operator==(const TriangleIterator& x) const{
+      if (mesh_ == x.mesh_ && idx_ == x.idx_)
+        return true;
+      return false;
+    }
+
+  private:
+    friend class Mesh;
+
+    TriangleIterator(const Mesh* mesh, size_type idx)
+      : mesh_(const_cast<Mesh*>(mesh)), idx_(idx){
+      }
+    Mesh* mesh_;
+    size_type idx_;
+  };
+
+  TriangleIterator triangle_begin() const{
+    return TriangleIterator(this, 0);
+  }
+
+  TriangleIterator triangle_end() const{
+    return TriangleIterator(this, tri_vec.size());
+  }
 
 
 //private:
