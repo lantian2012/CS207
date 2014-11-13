@@ -34,6 +34,7 @@ struct EdgeData
 {
   size_type triangle1;
   size_type triangle2;
+  EdgeData():triangle1(-1),triangle2(-1){}
 };
 
 /** @struct Mesh::TriData
@@ -188,6 +189,7 @@ int main(int argc, char* argv[])
     // HW4B: Need to implement add_triangle before this can be used!
 #if 1
     mesh.add_triangle(mesh_node[t[0]], mesh_node[t[1]], mesh_node[t[2]]);
+    
 #endif
   }
 
@@ -242,7 +244,7 @@ int main(int argc, char* argv[])
 
     // Update the viewer with new node positions
     // HW4B: Need to define node_iterators before these can be used!
-#if 0
+#if 1
     viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
                      CS207::DefaultColor(), NodePosition(), node_map);
 #endif
