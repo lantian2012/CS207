@@ -32,8 +32,9 @@ struct NodeData
 };
 struct EdgeData
 {
-  size_type triange1;
-  size_type triange2;
+  size_type triangle1;
+  size_type triangle2;
+  EdgeData():triangle1(-1), triangle2(-1){}
 };
 
 /** @struct Mesh::TriData

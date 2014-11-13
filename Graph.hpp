@@ -423,12 +423,12 @@ node_iterator remove_node(node_iterator n_it){
     
     //return the value associated with edge for lvalue operations
     edge_value_type& value(){
-      return graph_->edges[graph_->nodes[x_].edgevalues[y_]].value;
+      return graph_->edges[uid_].value;
     }
 
     //return the value associated with edge for rvalue operations
     const edge_value_type& value() const{
-      return graph_->edges[graph_->nodes[x_].edgevalues[y_]].value;
+      return graph_->edges[uid_].value;
     }
 
     size_type index() const{
@@ -486,7 +486,10 @@ node_iterator remove_node(node_iterator n_it){
     nodes[node1_uid].edgevalues.push_back(edges.size());
     nodes[node2_uid].neighbors.push_back(node1_uid);
     nodes[node2_uid].edgevalues.push_back(edges.size());
-    edges.push_back(internal_edge());
+    internal_edge tempedge;
+    tempedge.node1 = node1_uid;
+    tempedge.node2 = node2_uid;
+    edges.push_back(tempedge);
     //update edge size
     edgesize_++;
     Edge result = Edge(this, node1_uid, node2_uid, edges.size()-1);
@@ -593,16 +596,9 @@ node_iterator remove_node(node_iterator n_it){
    *
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
-  edge_value_type edge(size_type i) const {
-   
-    return edges[i].value;
-  }
   
-  Edge edge1(size_type i) const {
-    edge_iterator it = edge_begin();
-    for ( ; i != 0; --i) ++it;  // or:  std::advance(it, i);
-    return *it;
-   
+  Edge edge(size_type i) const {
+    return Edge(this, edges[i].node1, edges[i].node2, i);
   }
 
 
@@ -864,6 +860,8 @@ node_iterator remove_node(node_iterator n_it){
 
   struct internal_edge{
     edge_value_type value;
+    size_type node1;
+    size_type node2;
   };
 
   

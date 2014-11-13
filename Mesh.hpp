@@ -287,9 +287,7 @@ class Mesh {
       edge2.value().triangle1 = tri_vec.size()-1;
     else
       edge2.value().triangle2 = tri_vec.size()-1;
-     
-   
-    return Triangle(this,tri_vec.size()-1);
+      return Triangle(this,tri_vec.size()-1);
   }
 
   /** Determine if this Triangle belongs to this Graph
@@ -417,8 +415,8 @@ class Mesh {
         size_type i = 0;
         while(old.node(i).index() != last_)
           ++i;
-        if (old.edge(i).value().triangle1 == -1 || old.edge(i).value().triangle2 == -1){
-          if (t2_ == -1)
+        if (old.edge(i).value().triangle1 == unsigned(-1) || old.edge(i).value().triangle2 == unsigned(-1)){
+          if (t2_ == unsigned(-1))
             t_ = -1;
           else{
             t_ = t2_;
@@ -442,7 +440,7 @@ class Mesh {
 
       //True if n_ and t_ are the same
       bool operator==(const IncidentIterator_Node& x) const{
-        if (mesh_ == x.mesh_ && t_ == t_ && n_ == x.n_)
+        if (mesh_ == x.mesh_ && t_ == x.t_ && n_ == x.n_)
           return true;
         return false;
       }
@@ -476,9 +474,12 @@ class Mesh {
       othernode = start.node2().index();
     else
       othernode = start.node1().index();
-    //std::cout<<start.value().triangle1<<start.value().triangle2<<std::endl;
-    return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
-      start.value().triangle2, othernode, othernode);
+    if (start.value().triangle1 != unsigned(-1))
+      return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
+        start.value().triangle2, othernode, othernode);
+    else
+      return IncidentIterator_Node(this, n.index(), start.value().triangle2, 
+        start.value().triangle1, othernode, othernode);
   }
 
   /* Get the iterator that points to an invalid triangle of a node
@@ -533,17 +534,11 @@ class Mesh {
        */
       Triangle operator*() const{
         size_type e_uid = mesh_->tri_vec[triangle_uid].edges[incident_i];
-        Edge e = mesh_->graph_.edge1(e_uid);
-        std::cout<<"e.value().triangle1=="<<e.value().triangle1<<std::endl;
-        std::cout<<"e.value().triangle2=="<<e.value().triangle2<<std::endl;
-        std::cout<<"mesh_->graph_.get_edge_value(e_uid).triangle1=="<<mesh_->graph_.edge(e_uid).triangle1<<std::endl;
-        std::cout<<"mesh_->graph_.get_edge_value(e_uid).triangle2=="<<mesh_->graph_.edge(e_uid).triangle2<<std::endl;
-        
-        if(mesh_->graph_.edge(e_uid).triangle1 != triangle_uid)
-          
-          return Triangle(mesh_,mesh_->graph_.edge(e_uid).triangle1);
+        Edge e = mesh_->graph_.edge(e_uid);
+        if(mesh_->graph_.edge(e_uid).value().triangle1 != triangle_uid)
+          return Triangle(mesh_,mesh_->graph_.edge(e_uid).value().triangle1);
         else 
-          return Triangle(mesh_,mesh_->graph_.edge(e_uid).triangle2);
+          return Triangle(mesh_,mesh_->graph_.edge(e_uid).value().triangle2);
        
       }
 
