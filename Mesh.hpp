@@ -187,7 +187,7 @@ class Mesh {
      *Complexity = O(1)
          */
     incidentiterator_triangle triangle_end() const {
-      return incidentiterator_triangle(this, uid_, 2);
+      return incidentiterator_triangle(this, uid_, 3);
     }
 
   private:
@@ -476,7 +476,7 @@ class Mesh {
       othernode = start.node2().index();
     else
       othernode = start.node1().index();
-    std::cout<<start.value().triangle1<<start.value().triangle2<<std::endl;
+    //std::cout<<start.value().triangle1<<start.value().triangle2<<std::endl;
     return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
       start.value().triangle2, othernode, othernode);
   }
