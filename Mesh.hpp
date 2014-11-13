@@ -543,7 +543,7 @@ class Mesh {
   };
 
 
-private:
+//private:
   GraphType graph_; //a Graph Class object storing all the nodes and edges
   std::vector<T> tri_vec; // a vector storing all the triangles' data
 };

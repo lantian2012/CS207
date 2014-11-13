@@ -165,9 +165,23 @@ int main(int argc, char* argv[])
     // HW4B: Need to implement add_triangle before this can be used!
 #if 1
     mesh.add_triangle(mesh_node[t[0]], mesh_node[t[1]], mesh_node[t[2]]);
-    
+    //////
+    /*
+    std::cout<<"tri_size() == "<<mesh.tri_vec.size()<<std::endl;
+    std::cout<<"tri_nodes() == "<<mesh.tri_vec[mesh.tri_vec.size()-1].nodes[0]<<"  "<<mesh.tri_vec[mesh.tri_vec.size()-1].nodes[1]<<"  "<<mesh.tri_vec[mesh.tri_vec.size()-1].nodes[2]<<"  "<<std::endl;
+    std::cout<<"tri_edges() == "<<mesh.tri_vec[mesh.tri_vec.size()-1].edges[0]<<"  "<<mesh.tri_vec[mesh.tri_vec.size()-1].edges[1]<<"  "<<mesh.tri_vec[mesh.tri_vec.size()-1].edges[2]<<"  "<<std::endl;
+    std::cout<<"tri_n() == "<<mesh.tri_vec[mesh.tri_vec.size()-1].n[0]<<"  "<<mesh.tri_vec[mesh.tri_vec.size()-1].n[1]<<"  "<<mesh.tri_vec[mesh.tri_vec.size()-1].n[2]<<"  "<<std::endl;
+    std::cout<<"tri_area() == "<<mesh.tri_vec[mesh.tri_vec.size()-1].area<<std::endl;
+    */
+    ///////
 #endif
   }
+  
+ /* for(auto it =mesh.triangle_begin(); it!=mesh.triangle_end();++it){
+      std::cout<<"tri node == "<<(*it).uid_<<std::endl;
+      for(auto tit=(*it).triangle_begin();tit!=(*it).triangle_end();++tit)
+          std::cout<<"incident_it_tri node == "<<(*tit).uid_<<std::endl;
+  }*/
 
   // Print out the stats
   std::cout << mesh.num_nodes() << " "
