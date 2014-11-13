@@ -275,15 +275,15 @@ class Mesh {
       
     tri_vec.push_back(new_triangle);
     
-    if(edge0.value().triangle1 ==-1)
+    if(edge0.value().triangle1 == unsigned(-1))
       edge0.value().triangle1 = tri_vec.size()-1;
     else
       edge0.value().triangle2 = tri_vec.size()-1;
-    if(edge1.value().triangle1 ==-1)
+    if(edge1.value().triangle1 == unsigned(-1))
       edge1.value().triangle1 = tri_vec.size()-1;
     else
       edge1.value().triangle2 = tri_vec.size()-1;
-    if(edge2.value().triangle1 ==-1)
+    if(edge2.value().triangle1 == unsigned(-1))
       edge2.value().triangle1 = tri_vec.size()-1;
     else
       edge2.value().triangle2 = tri_vec.size()-1;
@@ -419,7 +419,7 @@ class Mesh {
           ++i;
         if (old.edge(i).value().triangle1 == -1 || old.edge(i).value().triangle2 == -1){
           if (t2_ == -1)
-            t_ == -1;
+            t_ = -1;
           else{
             t_ = t2_;
             t2_ = -1;

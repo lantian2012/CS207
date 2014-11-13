@@ -120,6 +120,7 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   // For each triangle, update Q_bar using the fluxes as in Equation 8.
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
 
+  /*
   for(auto i = m.edge_begin(); i != m.edge_end(); ++i){
     MeshType::Triangle trik = m.triangle((*i).value().triangle1);
     MeshType::Triangle trim = m.triangle((*i).value().triangle2);
@@ -143,7 +144,8 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
       sum += (*i).F(j);
     }
     (*i).Q() = (*i).Q()-dt/(*i).area()*sum;
-  }
+  }*/
+  (void) m; (void) f;
   return t + dt;
 }
 
@@ -233,7 +235,6 @@ int main(int argc, char* argv[])
 
   // Preconstruct a Flux functor
   EdgeFluxCalculator f;
-
   // Begin the time stepping
   for (double t = t_start; t < t_end; t += dt) {
     // Step forward in time with forward Euler
