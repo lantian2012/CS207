@@ -349,15 +349,45 @@ Edge add_edge(const Node& a, const Node& b) {
       //record the last_ = first_ = incident_edge.node().index()
       //t_ = incident_edge.value().triangle1 t2_ = incident_edge.value().triangle2
       //get the new t_ and update last_
-      //if last_ == init_ set t_ to invalid to mark the end
+      //if t_ == t2_ set t_ to invalid to mark the end
       //if meets the border. set last_ = init_ and explore t2_
       //when t2_ meets the end, set t_ to invilid
-      return IncidentIterator_Node();
+
+      if (t_ == t2_){
+        t_ = -1;
+      }
+      else{
+        Triangle old = mesh_->triangle(t_);
+        size_type i = 0;
+        while(old.node(i).index() != last_)
+          ++i;
+        if (old.edge(i).value().triangle1 == -1 || old.edge(i).value().triangle2 == -1){
+          if (t2_ == -1)
+            t_ == -1;
+          else{
+            t_ = t2_;
+            t2_ = -1;
+            last_ = init_;
+          }
+        }
+        else{
+          if (old.edge(i).node1().index() == n_)
+            last_ = old.edge(i).node2().index();
+          else
+            last_ = old.edge(i).node1().index();
+          if (old.edge(i).value().triangle1 == t_)
+            t_ = old.edge(i).value().triangle2;
+          else
+            t_ = old.edge(i).value().triangle1;
+        }
+      }
+      return *this;
       }
 
       //True if n_ and t_ are the same
       bool operator==(const IncidentIterator_Node& x) const{
-        (void) x;
+        if (mesh_ == x.mesh_ && t_ == t_ && n_ == x.n_)
+          return true;
         return false;
       }
   private:
@@ -384,8 +414,14 @@ Edge add_edge(const Node& a, const Node& b) {
    * @post result.last_ == result.first_
    */
   IncidentIterator_Node triangle_begin(Node n){
-    (void) n;
-    return IncidentIterator_Node();
+    Edge start = *n.edge_begin();
+    size_type othernode;
+    if (start.node1().index() == n.index())
+      othernode = start.node2().index();
+    else
+      othernode = start.node1().index();
+    return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
+      start.value().triangle2, othernode, othernode);
   }
 
   /* Get the iterator that points to an invalid triangle of a node
@@ -395,8 +431,8 @@ Edge add_edge(const Node& a, const Node& b) {
    * @post result.t_ == -1
    */
   IncidentIterator_Node triangle_end(Node n){
-    (void) n;
-    return IncidentIterator_Node();
+    return IncidentIterator_Node(this, n.index(), -1, 
+      -1, -1, -1);
   }
 
 
