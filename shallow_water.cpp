@@ -7,15 +7,16 @@
  * Second file: Triangles (one per line) defined by 3 indices into the point list
  */
 
-#include <fstream>
-#include <cmath>
 
 #include "CS207/SDLViewer.hpp"
 #include "CS207/Util.hpp"
 #include "CS207/Color.hpp"
-
 #include "Point.hpp"
+#include <fstream>
+#include <cmath>
+
 #include "Mesh.hpp"
+
 
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
@@ -29,6 +30,7 @@ typedef unsigned size_type;
 struct NodeData
 {
   QVar Q;
+  NodeData():Q(0.0,0.0,0.0){}
 };
 struct EdgeData
 {
@@ -102,7 +104,8 @@ struct NodePosition {
   Point operator()(const NODE& n) {
     // HW4B: You may change this to plot something other than the
     // positions of the nodes
-    return n.position();
+    return Point(n.position().x, n.position().y, n.value().Q.h);
+    //return n.position();
   }
 };
 
@@ -120,9 +123,32 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   // For each triangle, update Q_bar using the fluxes as in Equation 8.
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
 
+  // Implement Equation 7 from your pseudocode here.
+  for (auto it=m.triangle_begin(); it!=m.triangle_end(); ++it) {
+    QVar temp_sum = QVar(0.0,0.0,0.0);
+    int j=0;
+    for (auto init = (*it).triangle_begin(); init!=(*it).triangle_end(); ++init) {  
+        if((*init).index() !=-1){                         
+          QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), (*init).Q());
+          temp *= dt;
+          temp /= (*it).area();
+          temp_sum += temp;
+        }
+        else{
+          QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), QVar((*it).Q().h,0.0,0.0));
+          std::cout<<"QVar((*it).Q().h===="<<(*it).Q().h<<std::endl;
+          temp *= dt;
+          temp /= (*it).area();
+          temp_sum += temp;
+        }
+        ++j;
+    }
+    (*it).Q() -= temp_sum;
+  }
+  return t + dt;
   (void) m; (void) f;
   return t + dt;
-}
+};
 
 /** Convert the triangle-averaged values to node-averaged values for viewing. */
 template <typename MESH>
@@ -130,8 +156,19 @@ void post_process(MESH& m) {
   // HW4B: Post-processing step
   // Translate the triangle-averaged values to node-averaged values
   // Implement Equation 9 from your pseudocode here
+  for (auto it=m.node_begin(); it!=m.node_end(); ++it) {
+    double total_area = 0.0;
+    //(*it).value().Q= QVar(0.0, 0.0, 0.0);
+    for (auto iit=m.triangle_begin(*it); iit!=m.triangle_end(*it); ++iit) {
+      total_area += (*iit).area();
+      QVar temp = (*iit).Q();
+      temp *= (*iit).area();
+      (*it).value().Q += temp;
+    }
+    (*it).value().Q /= total_area;
+  }
   (void) m;
-}
+};
 
 
 
@@ -179,6 +216,23 @@ int main(int argc, char* argv[])
   // Set the initial conditions
   // Perform any needed precomputation
 
+  for (auto it=mesh.node_begin(); it!=mesh.node_end(); ++it) {
+    (*it).value().Q = QVar(0.0,0.0,0.0);
+    (*it).value().Q.h = 1.0-0.75*exp(-80.0*(pow(((*it).position().x-0.75),2)+pow((*it).position().y,2)));
+  }
+  // Set triangle values
+  for (auto it=mesh.triangle_begin(); it!=mesh.triangle_end(); ++it) {
+    (*it).Q() = QVar(0.0,0.0,0.0);
+    (*it).Q() += (*it).node(0).value().Q;
+    (*it).Q() += (*it).node(1).value().Q;
+    (*it).Q() += (*it).node(2).value().Q;
+    (*it).Q() /= 3.0;
+  }
+
+ 
+
+  
+  
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
   viewer.launch();
@@ -199,14 +253,27 @@ int main(int argc, char* argv[])
   //   we can compute the minimum edge length and maximum original water height
   //   to set the time-step
   // Compute the minimum edge length and maximum water height for computing dt
-#if 0
+  double min_edge_length =( *mesh.edge_begin()).length();
+  for (auto it=mesh.edge_begin(); it!=mesh.edge_end(); ++it) {
+    if ((*it).length() < min_edge_length) {
+      min_edge_length = (*it).length();
+    }
+  }
+  double max_height = 0.0;
+  for (auto it=mesh.node_begin(); it!=mesh.node_end(); ++it) {
+    if ((*it).value().Q.h > max_height) {
+      max_height = (*it).value().Q.h;
+    }
+  }
+  
+#if 1
   double dt = 0.25 * min_edge_length / (sqrt(grav * max_height));
 #else
   // Placeholder!! Delete me when min_edge_length and max_height can be computed!
   double dt = 0.1;
 #endif
   double t_start = 0;
-  double t_end = 10;
+  double t_end = 0.1;
 
   // Preconstruct a Flux functor
   EdgeFluxCalculator f;

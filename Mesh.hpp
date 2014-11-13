@@ -42,6 +42,12 @@ struct QVar {
     hy *= b;
     return *this;
   }
+  QVar& operator/=(double b) {
+    h  /= b;
+    hx /= b;
+    hy /= b;
+    return *this;
+  }
 
 };
 
@@ -105,14 +111,14 @@ class Mesh {
 
   /** Return the number of triangles in the mesh. */
   size_type num_triangles() const {
-    return tri_vec.size()-1;
+    return tri_vec.size();
   }
 
   class Triangle
   {
   public:
     /**construc an invalid triangle*/
-    Triangle(){
+    Triangle():uid_(-1){
     }
     /**Access the i node of the triangle
      * @pre 0<=i<3
@@ -130,7 +136,7 @@ class Mesh {
      */
     Edge edge(size_type i) {
       size_type edge_uid = mesh_->tri_vec[uid_].edges[i];
-      return mesh_->graph_.edge(edge_uid);
+      return mesh_->graph_.edge1(edge_uid);
     }
 
     /**return the area of this triangle
@@ -165,7 +171,6 @@ class Mesh {
     QVar& F(size_type i){
       return mesh_->tri_vec[uid_].F[i];
     }
-
 
 
     /* Return an iterator points to the first adjacent triangle of this triangle.
@@ -476,7 +481,7 @@ class Mesh {
       othernode = start.node2().index();
     else
       othernode = start.node1().index();
-    std::cout<<start.value().triangle1<<start.value().triangle2<<std::endl;
+    
     return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
       start.value().triangle2, othernode, othernode);
   }
@@ -531,19 +536,29 @@ class Mesh {
        *
        *Complexity = O(1)
        */
-      Triangle operator*() const{
+      Triangle operator*() {
         size_type e_uid = mesh_->tri_vec[triangle_uid].edges[incident_i];
-        Edge e = mesh_->graph_.edge1(e_uid);
-        std::cout<<"e.value().triangle1=="<<e.value().triangle1<<std::endl;
+        //Edge e = mesh_->graph_.edge1(e_uid);
+        /*std::cout<<"e.value().triangle1=="<<e.value().triangle1<<std::endl;
         std::cout<<"e.value().triangle2=="<<e.value().triangle2<<std::endl;
         std::cout<<"mesh_->graph_.get_edge_value(e_uid).triangle1=="<<mesh_->graph_.edge(e_uid).triangle1<<std::endl;
         std::cout<<"mesh_->graph_.get_edge_value(e_uid).triangle2=="<<mesh_->graph_.edge(e_uid).triangle2<<std::endl;
+        */
+        /*while(mesh_->graph_.edge(e_uid).triangle1 ==-1 || mesh_->graph_.edge(e_uid).triangle1 ==-1){
+          incident_i++;
+          e_uid = mesh_->tri_vec[triangle_uid].edges[incident_i];
+        }*/
         
-        if(mesh_->graph_.edge(e_uid).triangle1 != triangle_uid)
           
-          return Triangle(mesh_,mesh_->graph_.edge(e_uid).triangle1);
-        else 
-          return Triangle(mesh_,mesh_->graph_.edge(e_uid).triangle2);
+        if(mesh_->graph_.edge(e_uid).triangle1!= -1 && mesh_->graph_.edge(e_uid).triangle2 !=-1){
+          if(mesh_->graph_.edge(e_uid).triangle1 != triangle_uid)          
+            return Triangle(mesh_,mesh_->graph_.edge(e_uid).triangle1);
+          else 
+            return Triangle(mesh_,mesh_->graph_.edge(e_uid).triangle2);
+        }
+        else
+          return Triangle();
+        
        
       }
 
@@ -570,6 +585,10 @@ class Mesh {
        */
       bool operator==(const IncidentIterator_Triangle& x) const{
         return((x.triangle_uid == this->triangle_uid)  &&  (x.mesh_ == this->mesh_) && (x.incident_i == this->incident_i));
+      }
+      
+      size_type index(){
+        return incident_i;
       }
   private:
     friend class Mesh;
