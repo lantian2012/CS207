@@ -118,6 +118,31 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   // Compute all fluxes. (before updating any triangle Q_bars)
   // For each triangle, update Q_bar using the fluxes as in Equation 8.
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
+  /*
+  for(auto i = m.edge_begin(); i != m.edge_end(); ++i){
+    MeshType::Triangle trik = m.triangle((*i).value().triangle1);
+    MeshType::Triangle trim = m.triangle((*i).value().triangle2);
+    unsigned int edge_k = 0;
+    unsigned int edge_m = 0;
+    //end which edge (*i) is in trik and trim
+    while(trik.node(edge_k).index()== (*i).node1().index() 
+      || trik.node(edge_k).index()== (*i).node2().index() )
+      ++edge_k;
+    while(trim.node(edge_m).index()== (*i).node1().index() 
+      || trim.node(edge_m).index()== (*i).node2().index() )
+      ++edge_m;
+    QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), trim.Q());
+    trik.F(edge_k) = flux;
+    trim.F(edge_m) = -flux;
+  }
+
+  for(auto i = m.triangle_begin(); i != m.triangle_end(); ++i){
+    QVar sum = QVar(0, 0, 0);
+    for (int j = 0; j < 3; ++j){
+      sum += (*i).F(j);
+    }
+    (*i).Q() = (*i).Q()-dt/(*i).area()*sum;
+  }*/
   (void) m; (void) f;
   return t + dt;
 }

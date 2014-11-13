@@ -593,12 +593,20 @@ node_iterator remove_node(node_iterator n_it){
    *
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
-  Edge edge(size_type i) const {
+  edge_value_type edge(size_type i) const {
+   
+    return edges[i].value;
+  }
+  
+  Edge edge1(size_type i) const {
     edge_iterator it = edge_begin();
     for ( ; i != 0; --i) ++it;  // or:  std::advance(it, i);
     return *it;
+   
   }
 
+
+  
 
   ///////////////
   // Iterators //
