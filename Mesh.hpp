@@ -95,6 +95,7 @@ class Mesh {
   /** Predeclaration of Triangle type. */
   class Triangle;
   /** Type of triangle iterators, which iterate over all adjacent mesh triangles of a triangle. */
+  typedef Triangle triangle_type;
   class IncidentIterator_Triangle;  
   /** Synonym for IncidentIterator_Triangle */
   typedef IncidentIterator_Triangle incidentiterator_triangle;
