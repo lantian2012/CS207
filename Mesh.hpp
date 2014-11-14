@@ -1,6 +1,7 @@
 #pragma once
 #include "Graph.hpp"
 #include "Point.hpp"
+#include <cmath>
 /** @file Mesh.hpp
  * @brief A Mesh is composed of nodes, edges, and triangles such that:
  *  -- All triangles have three nodes and three edges.
@@ -244,6 +245,8 @@ class Mesh {
     double xc = c.position().x;
     double yc = c.position().y;
     new_triangle.area = (xa*yb+xb*yc+xc*ya-xb*ya-xc*yb-xa*yc)/2;
+    if (new_triangle.area < 0)
+      new_triangle.area = -new_triangle.area;
 
     Point p = a.position() - b.position(); 
     double nx = p.y;

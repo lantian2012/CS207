@@ -124,7 +124,7 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
   
   // Implement Equation 7 from your pseudocode here.
-  #if 1
+  #if 0
   for (auto it=m.triangle_begin(); it!=m.triangle_end(); ++it) {
     QVar temp_sum = QVar(0.0,0.0,0.0);
     int j=0;
@@ -248,6 +248,32 @@ struct Dam
 
 
 
+void print(const MeshType& m, double t){
+  unsigned int count = 0;
+  for(auto it = m.triangle_begin(); it != m.triangle_end(); ++it){
+    std::cout<<"Triangle: "<<count<<" @"<<t<<std::endl;
+    std::cout<<"Area: "<<(*it).area()<<std::endl;
+    std::cout<<"Node: "<<(*it).node(0).position()<<"||"<<(*it).node(1).position()<<"||"<<(*it).node(2).position()<<std::endl;
+    std::cout<<"QVar: "<<"h:"<<(*it).Q().h<<"  hu:"<<(*it).Q().hx<<"  hv:"<<(*it).Q().hy<<std::endl;
+    std::cout<<"Edge 0  "<<(*it).edge(0).node1().position()<<"  "<<(*it).edge(0).node2().position()<<std::endl;
+    std::cout<<"   Normal: "<<(*it).normal(0)<<std::endl;
+    std::cout<<"   Adj Tri: "<<(*it).edge(0).value().triangle1<<"  "<<(*it).edge(0).value().triangle2<<std::endl;
+    std::cout<<"   Edge flux: "<<"h:"<<(*it).F(0).h<<"  hu:"<<(*it).F(0).hx<<"  hv:"<<(*it).F(0).hy<<std::endl;
+    std::cout<<"Edge 1  "<<(*it).edge(1).node1().position()<<"  "<<(*it).edge(1).node2().position()<<std::endl;
+    std::cout<<"   Normal: "<<(*it).normal(1)<<std::endl;
+    std::cout<<"   Adj Tri: "<<(*it).edge(1).value().triangle1<<"  "<<(*it).edge(1).value().triangle2<<std::endl;
+    std::cout<<"   Edge flux: "<<"h:"<<(*it).F(1).h<<"  hu:"<<(*it).F(1).hx<<"  hv:"<<(*it).F(1).hy<<std::endl;
+    std::cout<<"Edge 2  "<<(*it).edge(2).node1().position()<<"  "<<(*it).edge(2).node2().position()<<std::endl;
+    std::cout<<"   Normal: "<<(*it).normal(2)<<std::endl;
+    std::cout<<"   Adj Tri: "<<(*it).edge(2).value().triangle1<<"  "<<(*it).edge(2).value().triangle2<<std::endl;
+    std::cout<<"   Edge flux: "<<"h:"<<(*it).F(2).h<<"  hu:"<<(*it).F(2).hx<<"  hv:"<<(*it).F(2).hy<<std::endl;
+    std::cout<<std::endl<<std::endl;
+    count++;
+  }
+}
+
+
+
 int main(int argc, char* argv[])
 {
   // Check arguments
@@ -355,6 +381,7 @@ int main(int argc, char* argv[])
 
   // Begin the time stepping
   for (double t = t_start; t < t_end; t += dt) {
+    //print(mesh, t);
     // Step forward in time with forward Euler
     hyperbolic_step(mesh, f, t, dt);
 
