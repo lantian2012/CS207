@@ -43,7 +43,7 @@ struct QVar {
     return *this;
   }
   QVar& operator/=(double b) {
-    h /= b;
+    h  /= b;
     hx /= b;
     hy /= b;
     return *this;
@@ -114,14 +114,14 @@ class Mesh {
 
   /** Return the number of triangles in the mesh. */
   size_type num_triangles() const {
-    return tri_vec.size()-1;
+    return tri_vec.size();
   }
 
   class Triangle
   {
   public:
     /**construc an invalid triangle*/
-    Triangle(){
+    Triangle():uid_(-1){
     }
     /**Access the i node of the triangle
      * @pre 0<=i<3
@@ -174,7 +174,6 @@ class Mesh {
     QVar& F(size_type i){
       return mesh_->tri_vec[uid_].F[i];
     }
-
 
 
     /* Return an iterator points to the first adjacent triangle of this triangle.
@@ -483,12 +482,11 @@ class Mesh {
       othernode = start.node2().index();
     else
       othernode = start.node1().index();
-    if (start.value().triangle1 != unsigned(-1))
-      return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
-        start.value().triangle2, othernode, othernode);
-    else
-      return IncidentIterator_Node(this, n.index(), start.value().triangle2, 
-        start.value().triangle1, othernode, othernode);
+
+    
+    return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
+      start.value().triangle2, othernode, othernode);
+
   }
 
   /* Get the iterator that points to an invalid triangle of a node
@@ -541,13 +539,16 @@ class Mesh {
        *
        *Complexity = O(1)
        */
-      Triangle operator*() const{
+      Triangle operator*() {
         size_type e_uid = mesh_->tri_vec[triangle_uid].edges[incident_i];
-        Edge e = mesh_->graph_.edge(e_uid);
+
+       
+        //Edge e = mesh_->graph_.edge(e_uid);
         if(mesh_->graph_.edge(e_uid).value().triangle1 != triangle_uid)
           return Triangle(mesh_,mesh_->graph_.edge(e_uid).value().triangle1);
         else 
           return Triangle(mesh_,mesh_->graph_.edge(e_uid).value().triangle2);
+        
        
       }
 
@@ -574,6 +575,10 @@ class Mesh {
        */
       bool operator==(const IncidentIterator_Triangle& x) const{
         return((x.triangle_uid == this->triangle_uid)  &&  (x.mesh_ == this->mesh_) && (x.incident_i == this->incident_i));
+      }
+      
+      size_type index(){
+        return incident_i;
       }
   private:
     friend class Mesh;

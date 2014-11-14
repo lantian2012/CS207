@@ -7,15 +7,16 @@
  * Second file: Triangles (one per line) defined by 3 indices into the point list
  */
 
-#include <fstream>
-#include <cmath>
 
 #include "CS207/SDLViewer.hpp"
 #include "CS207/Util.hpp"
 #include "CS207/Color.hpp"
-
 #include "Point.hpp"
+#include <fstream>
+#include <cmath>
+
 #include "Mesh.hpp"
+
 
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
@@ -29,6 +30,7 @@ typedef unsigned size_type;
 struct NodeData
 {
   QVar Q;
+  NodeData():Q(0.0,0.0,0.0){}
 };
 struct EdgeData
 {
@@ -103,6 +105,7 @@ struct NodePosition {
     // HW4B: You may change this to plot something other than the
     // positions of the nodes
     return Point(n.position().x, n.position().y, n.value().Q.h);
+    //return n.position();
   }
 };
 
@@ -120,6 +123,30 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   // For each triangle, update Q_bar using the fluxes as in Equation 8.
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
   
+  // Implement Equation 7 from your pseudocode here.
+  #if 1
+  for (auto it=m.triangle_begin(); it!=m.triangle_end(); ++it) {
+    QVar temp_sum = QVar(0.0,0.0,0.0);
+    int j=0;
+    for (auto init = (*it).triangle_begin(); init!=(*it).triangle_end(); ++init) {  
+        if((*init).index() !=unsigned(-1)){                         
+          QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), (*init).Q());
+          temp *= dt;
+          temp /= (*it).area();
+          temp_sum += temp;
+        }
+        else{
+          QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), QVar((*it).Q().h,0.0,0.0));
+          temp *= dt;
+          temp /= (*it).area();
+          temp_sum += temp;
+        }
+        ++j;
+    }
+    (*it).Q() -= temp_sum;
+  }
+  return t + dt;
+  #else
   for(auto i = m.edge_begin(); i != m.edge_end(); ++i){
     if ((*i).value().triangle1 != (unsigned) -1 && (*i).value().triangle2 != (unsigned) -1 ){
       MeshType::Triangle trik = m.triangle((*i).value().triangle1);
@@ -159,8 +186,10 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
     }
     (*i).Q() = (*i).Q()-dt/(*i).area()*sum;
   }
+  
   return t + dt;
-}
+  #endif
+};
 
 /** Convert the triangle-averaged values to node-averaged values for viewing. */
 template <typename MESH>
@@ -181,20 +210,39 @@ void post_process(MESH& m) {
   }
 }
 
-Point get_center(MeshType::triangle_type t){
-  return (t.node(0).position()+t.node(1).position()
-    +t.node(2).position())/3;
-}
 
 template <typename MESH>
 struct Pebble
 {
-  void operator()(MESH& m){
-    for(auto it=m.triangle_begin(); it != m.triangle_end(); ++it){
-      Point center = get_center(*it);
-      (*it).Q().h = 1-0.75*exp(-80*(pow(center.x-0.75,2)+pow(center.y,2)));
+  void operator()(typename MESH::node_type t){
+    t.value().Q.h = 1-0.75*exp(-80*(pow(t.position().x-0.75,2)+pow(t.position().y,2)));
+  }
+};
+
+template <typename MESH>
+struct Wave
+{
+  void operator()(typename MESH::node_type t){
+    double temp = ((pow((t.position().x-0.75),2)+pow(t.position().y,2))-pow(0.15,2));
+    if (temp < 0) {
+      t.value().Q.h = 1.0+0.75;
     }
-    post_process(m);
+    else {
+      t.value().Q.h = 1.0;
+    }
+  }
+};
+
+template <typename MESH>
+struct Dam
+{
+  void operator()(typename MESH::node_type t){
+    if (t.position().x < 0) {
+      t.value().Q.h = 1.0+0.75;
+    }
+    else {
+      t.value().Q.h = 1.0;
+    }
   }
 };
 
@@ -243,8 +291,22 @@ int main(int argc, char* argv[])
   // Set the initial conditions
   // Perform any needed precomputation
 
-  Pebble<MeshType> pebble;
-  pebble(mesh);
+  Wave<MeshType> init;
+  for(auto it= mesh.node_begin(); it != mesh.node_end(); ++it){
+    init(*it);
+  }
+
+  // Set triangle values
+  for (auto it=mesh.triangle_begin(); it!=mesh.triangle_end(); ++it) {
+    (*it).Q() = QVar(0.0,0.0,0.0);
+    (*it).Q() += (*it).node(0).value().Q;
+    (*it).Q() += (*it).node(1).value().Q;
+    (*it).Q() += (*it).node(2).value().Q;
+    (*it).Q() /= 3.0;
+  }
+
+ 
+
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
   viewer.launch();
@@ -265,18 +327,21 @@ int main(int argc, char* argv[])
   //   we can compute the minimum edge length and maximum original water height
   //   to set the time-step
   // Compute the minimum edge length and maximum water height for computing dt
-#if 1
-  double min_edge_length = 99999999;
-  for(auto it = mesh.edge_begin(); it != mesh.edge_end(); ++it) {
-    if ((*it).length() < min_edge_length)
+  double min_edge_length =( *mesh.edge_begin()).length();
+  for (auto it=mesh.edge_begin(); it!=mesh.edge_end(); ++it) {
+    if ((*it).length() < min_edge_length) {
       min_edge_length = (*it).length();
+    }
   }
+  double max_height = 0.0;
+  for (auto it=mesh.node_begin(); it!=mesh.node_end(); ++it) {
+    if ((*it).value().Q.h > max_height) {
+      max_height = (*it).value().Q.h;
+    }
+  }
+  
+#if 1
 
-  double max_height = 0;
-  for(auto it = mesh.triangle_begin(); it != mesh.triangle_end(); ++it) {
-    if ((*it).Q().h > max_height)
-      max_height = (*it).Q().h;
-  }
   double dt = 0.25 * min_edge_length / (sqrt(grav * max_height));
 #else
   // Placeholder!! Delete me when min_edge_length and max_height can be computed!
@@ -298,7 +363,7 @@ int main(int argc, char* argv[])
 
     // Update the viewer with new node positions
     // HW4B: Need to define node_iterators before these can be used!
-#if 0
+#if 1
     viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
                      CS207::DefaultColor(), NodePosition(), node_map);
 #endif
