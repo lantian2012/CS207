@@ -267,6 +267,9 @@ void print(const MeshType& m, double t){
     std::cout<<"   Normal: "<<(*it).normal(2)<<std::endl;
     std::cout<<"   Adj Tri: "<<(*it).edge(2).value().triangle1<<"  "<<(*it).edge(2).value().triangle2<<std::endl;
     std::cout<<"   Edge flux: "<<"h:"<<(*it).F(2).h<<"  hu:"<<(*it).F(2).hx<<"  hv:"<<(*it).F(2).hy<<std::endl;
+    std::cout<<"node0:Q: "<<(*it).node(0).value().Q.h<<"  "<<(*it).node(0).value().Q.hx<<"  "<<(*it).node(0).value().Q.hy<<std::endl;
+    std::cout<<"node1:Q: "<<(*it).node(1).value().Q.h<<"  "<<(*it).node(1).value().Q.hx<<"  "<<(*it).node(1).value().Q.hy<<std::endl;
+    std::cout<<"node2:Q: "<<(*it).node(2).value().Q.h<<"  "<<(*it).node(2).value().Q.hx<<"  "<<(*it).node(2).value().Q.hy<<std::endl;
     std::cout<<std::endl<<std::endl;
     count++;
   }
@@ -317,7 +320,7 @@ int main(int argc, char* argv[])
   // Set the initial conditions
   // Perform any needed precomputation
 
-  Wave<MeshType> init;
+  Dam<MeshType> init;
   for(auto it= mesh.node_begin(); it != mesh.node_end(); ++it){
     init(*it);
   }
