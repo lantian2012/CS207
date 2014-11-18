@@ -364,7 +364,7 @@ int main(int argc, char* argv[])
   double dt = 0.1;
 #endif
   double t_start = 0;
-  double t_end = 0.49;
+  double t_end = 10;
 
   // Preconstruct a Flux functor
   EdgeFluxCalculator f;
