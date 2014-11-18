@@ -112,29 +112,7 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   //  NOTE: Much like symp_euler_step, this may require TWO for-loops
   
   // Implement Equation 7 from your pseudocode here.
-  #if 0
-  for (auto it=m.triangle_begin(); it!=m.triangle_end(); ++it) {
-    QVar temp_sum = QVar(0.0,0.0,0.0);
-    int j=0;
-    for (auto init = (*it).triangle_begin(); init!=(*it).triangle_end(); ++init) {  
-        if((*init).index() !=unsigned(-1)){                         
-          QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), (*init).Q());
-          temp *= dt;
-          temp /= (*it).area();
-          temp_sum += temp;
-        }
-        else{
-          QVar temp = f((*it).normal(j).x, (*it).normal(j).y, dt, (*it).Q(), QVar((*it).Q().h,0.0,0.0));
-          temp *= dt;
-          temp /= (*it).area();
-          temp_sum += temp;
-        }
-        ++j;
-    }
-    (*it).Q() -= temp_sum;
-  }
-  return t + dt;
-  #else
+
   for(auto i = m.edge_begin(); i != m.edge_end(); ++i){
     if ((*i).triangle1().index() != (unsigned) -1 && (*i).triangle2().index() != (unsigned) -1 ){
       MeshType::Triangle trik = (*i).triangle1();
@@ -176,7 +154,6 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   }
   
   return t + dt;
-  #endif
 };
 
 /** Convert the triangle-averaged values to node-averaged values for viewing. */
@@ -233,36 +210,6 @@ struct Dam
 };
 
 
-
-/*void print(const MeshType& m, double t){
-  unsigned int count = 0;
-  for(auto it = m.triangle_begin(); it != m.triangle_end(); ++it){
-    std::cout<<"Triangle: "<<count<<" @"<<t<<std::endl;
-    std::cout<<"Area: "<<(*it).area()<<std::endl;
-    std::cout<<"Node: "<<(*it).node(0).position()<<"||"<<(*it).node(1).position()<<"||"<<(*it).node(2).position()<<std::endl;
-    std::cout<<"QVar: "<<"h:"<<(*it).value().Q.h<<"  hu:"<<(*it).value().Q.hx<<"  hv:"<<(*it).value().Q.hy<<std::endl;
-    std::cout<<"Edge 0  "<<(*it).edge(0).node1().position()<<"  "<<(*it).edge(0).node2().position()<<std::endl;
-    std::cout<<"   Normal: "<<(*it).normal(0)<<std::endl;
-    std::cout<<"   Adj Tri: "<<(*it).edge(0).triangle1().index()<<"  "<<(*it).edge(0).triangle2().index()<<std::endl;
-    std::cout<<"   Edge flux: "<<"h:"<<(*it).value().F[0].h<<"  hu:"<<(*it).value().F[0].hx<<"  hv:"<<(*it).value().F[0].hy<<std::endl;
-    std::cout<<"Edge 1  "<<(*it).edge(1).node1().position()<<"  "<<(*it).edge(1).node2().position()<<std::endl;
-    std::cout<<"   Normal: "<<(*it).normal(1)<<std::endl;
-    std::cout<<"   Adj Tri: "<<(*it).edge(1).triangle1().index()<<"  "<<(*it).edge(1).triangle2().index()<<std::endl;
-    std::cout<<"   Edge flux: "<<"h:"<<(*it).value().F[1].h<<"  hu:"<<(*it).value().F[1].hx<<"  hv:"<<(*it).value().F[1].hy<<std::endl;
-    std::cout<<"Edge 2  "<<(*it).edge(2).node1().position()<<"  "<<(*it).edge(2).node2().position()<<std::endl;
-    std::cout<<"   Normal: "<<(*it).normal(2)<<std::endl;
-    std::cout<<"   Adj Tri: "<<(*it).edge(2).triangle1().index()<<"  "<<(*it).edge(2).triangle2().index()<<std::endl;
-    std::cout<<"   Edge flux: "<<"h:"<<(*it).value().F[2].h<<"  hu:"<<(*it).value().F[2].hx<<"  hv:"<<(*it).value().F[2].hy<<std::endl;
-    std::cout<<"node0:Q: "<<(*it).node(0).value().Q.h<<"  "<<(*it).node(0).value().Q.hx<<"  "<<(*it).node(0).value().Q.hy<<std::endl;
-    std::cout<<"node1:Q: "<<(*it).node(1).value().Q.h<<"  "<<(*it).node(1).value().Q.hx<<"  "<<(*it).node(1).value().Q.hy<<std::endl;
-    std::cout<<"node2:Q: "<<(*it).node(2).value().Q.h<<"  "<<(*it).node(2).value().Q.hx<<"  "<<(*it).node(2).value().Q.hy<<std::endl;
-    std::cout<<std::endl<<std::endl;
-    count++;
-  }
-}*/
-
-
-
 int main(int argc, char* argv[])
 {
   // Check arguments
@@ -303,13 +250,22 @@ int main(int argc, char* argv[])
             << mesh.num_triangles() << std::endl;
 
   // HW4B Initialization
-  // Set the initial conditions
-  // Perform any needed precomputation
-
-  Dam<MeshType> init;
-  for(auto it= mesh.node_begin(); it != mesh.node_end(); ++it){
-    init(*it);
-  }
+  // Set the initial conditions according the type of input pattern
+  if(argv[2][5]=='d'){
+    Dam<MeshType> init;
+    for(auto it= mesh.node_begin(); it != mesh.node_end(); ++it)
+      init(*it);
+    }
+  else if((argv[2][5]=='p')){
+    Pebble<MeshType> init;
+    for(auto it= mesh.node_begin(); it != mesh.node_end(); ++it)
+      init(*it);
+    }
+  else{
+    Wave<MeshType> init;
+    for(auto it= mesh.node_begin(); it != mesh.node_end(); ++it)
+      init(*it);
+    }
 
   // Set triangle values
   for (auto it=mesh.triangle_begin(); it!=mesh.triangle_end(); ++it) {

@@ -24,7 +24,7 @@ struct QVar {
   QVar(double h_, double hx_, double hy_)
       : h(h_), hx(hx_), hy(hy_) {
   }
-  // More operators?
+  // More operators
   QVar& operator+=(const QVar& b) {
     h += b.h;
     hx += b.hx;
@@ -185,14 +185,14 @@ class Mesh {
         return (mesh_ < x.mesh_);
     }
 
-    /** Return the value associated with this Node
+    /** Return the user-specifies value of this Node
      *  For rvalue operations
      */
     node_value_type& value(){
       return mesh_->graph_.node(uid_).value().value;
     }
 
-    /** Return the value associated with this Node
+    /** Return the user-specifies value of this Node
      *  For lvalue operations
      */
     const node_value_type& value() const {
@@ -299,12 +299,12 @@ class Mesh {
         return (mesh_ < x.mesh_);
     }
     
-    //return the value associated with edge for lvalue operations
+    //Return the user-specifies value of this edge
     edge_value_type& value(){
       return mesh_->graph_->edge(uid_).value().value;
     }
 
-    //return the value associated with edge for rvalue operations
+    //Return the user-specifies value of this edge
     const edge_value_type& value() const{
       return mesh_->graph_->edge(uid_).value().value;
     }
