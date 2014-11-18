@@ -82,17 +82,26 @@ class Mesh {
   //   inner classes, private member data, etc.hello
 
 
-
+ private:
+  struct internal_node_value;
+  struct internal_edge_value;
+  struct internal_tri_value;
 
  public:
   /** Type of indexes and sizes. Return type of Mesh::num_nodes(). */
   typedef unsigned size_type;
-  typedef Graph<N, E> GraphType;
-  typedef typename GraphType::node_type Node;
-  typedef typename GraphType::edge_type Edge;
-  typedef typename GraphType::node_type node_type;
-  typedef typename GraphType::node_iterator node_iterator;
-  typedef typename GraphType::edge_iterator edge_iterator;
+  typedef Graph<internal_node_value, internal_edge_value> GraphType;
+  class Node;
+  typedef Node node_type;
+  class Edge;
+  typedef Edge edge_type;
+  class NodeIterator;
+  typedef NodeIterator node_iterator;
+  class EdgeIterator;
+  typedef EdgeIterator edge_iterator;
+  typedef N node_value_type;
+  typedef E edge_value_type;
+  typedef T triangle_value_type;
   /** Predeclaration of Triangle type. */
   class Triangle;
   /** Type of triangle iterators, which iterate over all adjacent mesh triangles of a triangle. */
@@ -100,6 +109,11 @@ class Mesh {
   class IncidentIterator_Triangle;  
   /** Synonym for IncidentIterator_Triangle */
   typedef IncidentIterator_Triangle incidentiterator_triangle;
+
+  class IncidentEdgeIterator;
+  typedef IncidentEdgeIterator incident_edge_iterator;
+
+
 
   Mesh() {}
 
@@ -118,6 +132,204 @@ class Mesh {
     return tri_vec.size();
   }
 
+  class Node:private totally_ordered<Node>{
+  public:
+    /** Construct an invalid node.
+     *
+     * Valid nodes are obtained from the Graph class, but it
+     * is occasionally useful to declare an @i invalid node, and assign a
+     * valid node to it later. For example:
+     *
+     * @code
+     * Mesh::node_type x;
+     * if (...should pick the first node...)
+     *   x = graph.node(0);
+     * else
+     *   x = some other node using a complicated calculation
+     * do_something(x);
+     * @endcode
+     */
+    Node(){}
+    /** Return this node's position. */
+    const Point& position() const {
+      return mesh_->graph_.node(uid_).position();
+    }
+
+    /** Return this node's index, a number in the range [0, graph_size()). */
+    size_type index() const {
+      return uid_;
+    }
+
+    /** Test whether this node and @a x are equal.
+     *
+     * Equal nodes have the same graph and the same index.
+     */
+    bool operator==(const Node& x) const {
+      if (x.mesh_ == mesh_ && x.uid_ == uid_)
+        return true;
+      return false;
+    }
+
+    /** Test whether this node is less than @a x in the global order.
+     *
+     * This ordering function is useful for STL containers such as
+     * std::map<>. It need not have any geometric meaning.
+     *
+     * The node ordering relation must obey trichotomy: For any two nodes x
+     * and y, exactly one of x == y, x < y, and y < x is true.
+     */
+    bool operator<(const Node& x) const {
+      if (mesh_ == x.mesh_)
+        return (uid_ < x.uid_);
+      else
+        return (mesh_ < x.mesh_);
+    }
+
+    /** Return the value associated with this Node
+     *  For rvalue operations
+     */
+    node_value_type& value(){
+      return mesh_->graph_.node(uid_).value().value;
+    }
+
+    /** Return the value associated with this Node
+     *  For lvalue operations
+     */
+    const node_value_type& value() const {
+      return mesh_->graph_.node(uid_).value().value;
+    }
+
+    /* Return an iterator that points to the first incident edge of this node
+     * If degree()==0, the returned iterator value shall not be dereferenced
+     */
+    incident_edge_iterator edge_begin() const{
+      return IncidentEdgeIterator(mesh_, mesh_->graph_.node(uid_).edge_begin());
+    }
+    /*  Returns an iterator referring to the past-the-end incident edge
+       *  of this node
+     *The past-the-end incident edge is the theoretical incident edge that 
+       *  would follow the last edge. It does not point to any element, and 
+       *  thus shall not be dereferenced.
+     *If degree()==0, this function returns the same as edge_begin().
+     */
+    incident_edge_iterator edge_end() const{
+      return IncidentEdgeIterator(mesh_, mesh_->graph_.node(uid_).edge_end());
+    }
+
+  private:
+    friend class Mesh;
+    Mesh* mesh_; //pointer to the associated Mesh
+    size_type uid_; //uid of the node; the same uid as in graph
+    // a private constructor for graph to construct a Node instance
+    Node(const Mesh* mesh, size_type uid)
+      : mesh_(const_cast<Mesh*>(mesh)), uid_(uid){
+      }
+  };
+
+  /** Add a node to the graph, returning the added node.
+   * @param[in] position The new node's position
+   * @param[in] value_in The value associated with this node
+   * @post new graph_.size() == old graph_.size() + 1
+   * @post result_node.index() == old size()
+   * Complexity: O(1)
+   */
+  Node add_node(const Point& position, const N& value_in = N()) {
+    auto n = graph_.add_node(position, internal_node_value(value_in));
+    return Node(this, n.index());
+  }
+
+  Node node(size_type i){
+    return Node(this, i);
+  }
+
+  class Edge:private totally_ordered<Edge>{
+   public:
+    /** Construct an invalid Edge. */
+    Edge() {
+    }
+
+    /** Return a node of this Edge */
+    Node node1() const {
+      // fetch the node index stored in the graph first
+      // then fetch the node from graph
+      return mesh_->node(mesh_->graph_.edge(uid_).node1().index());
+    }
+
+    /** Return the other node of this Edge */
+    Node node2() const {
+      // fetch the node index stored in the graph first
+      // then fetch the node from graph
+      return mesh_->node(mesh_->graph_.edge(uid_).node2().index());
+    }
+
+    double length() const{
+      return mesh_->graph_.edge(uid_).length();
+    }
+
+    Triangle triangle1() {
+      return Triangle(mesh_, mesh_->graph_.edge(uid_).value().triangle1);
+    }
+
+    Triangle triangle2() {
+      return Triangle(mesh_, mesh_->graph_.edge(uid_).value().triangle2);
+    }
+
+    /** Test whether this edge and @a x are equal.
+     *
+     * Equal edges are from the same graph and have the same nodes.
+     */
+    bool operator==(const Edge& x) const {
+      if (mesh_ == x.mesh_ && uid_ == x.uid_)
+        return true;
+      return false;
+    }
+
+    /** Test whether this edge is less than @a x in the global order.
+     *
+     * This ordering function is useful for STL containers such as
+     * std::map<>. It need not have any geometric meaning.
+     *
+     * The edge ordering relation must obey trichotomy: For any two edges x
+     * and y, exactly one of x == y, x < y, and y < x is true.
+     */
+    bool operator<(const Edge& x) const {
+      if (mesh_ == x.mesh_)
+        return (uid_ < x.uid_);
+      else
+        return (mesh_ < x.mesh_);
+    }
+    
+    //return the value associated with edge for lvalue operations
+    edge_value_type& value(){
+      return mesh_->graph_->edge(uid_).value().value;
+    }
+
+    //return the value associated with edge for rvalue operations
+    const edge_value_type& value() const{
+      return mesh_->graph_->edge(uid_).value().value;
+    }
+
+    size_type index() const{
+      return uid_;
+    }
+
+
+   private:
+    // Allow Graph to access Edge's private member data and functions.
+    friend class Mesh;
+    Mesh* mesh_;  //pointer to the associated graph
+    size_type uid_; //the unique id of the edge
+    
+    //private constructor for graph to construct edge instance
+    Edge(const Mesh* mesh, size_type uid)
+      : mesh_(const_cast<Mesh*>(mesh)), uid_(uid){
+      }
+  };
+
+  Edge edge(size_type i){
+    return Edge(this, i);
+  }
+
   class Triangle
   {
   public:
@@ -131,7 +343,7 @@ class Mesh {
      */
     Node node(size_type i) {
       size_type node_uid = mesh_->tri_vec[uid_].nodes[i];
-      return mesh_->graph_.node(node_uid);
+      return mesh_->node(node_uid);
     }
     /**Access the first node of the triangle
      * @pre 0<=i<3
@@ -140,7 +352,7 @@ class Mesh {
      */
     Edge edge(size_type i) {
       size_type edge_uid = mesh_->tri_vec[uid_].edges[i];
-      return mesh_->graph_.edge(edge_uid);
+      return mesh_->edge(edge_uid);
     }
 
     /**return the area of this triangle
@@ -149,12 +361,6 @@ class Mesh {
     double area() const{
       return mesh_->tri_vec[uid_].area;
     }
-    /**Access the Q of the triangle
-     *Complexity = O(1)
-     */
-    QVar& Q(){
-      return mesh_->tri_vec[uid_].Q;
-    }
     /**return the index of the triangle
      *Complexity = O(1)
      */
@@ -162,20 +368,28 @@ class Mesh {
       return uid_;
     }
 
+    /** Return the value associated with this Node
+     *  For rvalue operations
+     */
+    triangle_value_type& value(){
+      return mesh_->tri_vec[uid_].value;
+    }
+
+    /** Return the value associated with this Node
+     *  For lvalue operations
+     */
+    const triangle_value_type& value() const {
+      return mesh_->tri_vec[uid_].value;
+    }
+
+
+
     /**return the unit normal vector of the edge
         *that is opposite to node i
       */
     Point normal(size_type i){
       return mesh_->tri_vec[uid_].n[i];
     }
-
-    /**return the flux of the edge
-        *that is opposite to node i
-      */
-    QVar& F(size_type i){
-      return mesh_->tri_vec[uid_].F[i];
-    }
-
 
     /* Return an iterator points to the first adjacent triangle of this triangle.
      * @post result->incident_i ==0
@@ -207,16 +421,7 @@ class Mesh {
     Mesh* mesh_;
   };
 
-  /** Add a node to the graph, returning the added node.
-   * @param[in] position The new node's position
-   * @param[in] value_in The value associated with this node
-   * @post new graph_.size() == old graph_.size() + 1
-   * @post result_node.index() == old size()
-   * Complexity: O(1)
-   */
-  Node add_node(const Point& position, const N& value_in = N()) {
-    return graph_.add_node(position, value_in);
-  }
+
 
   /** Add an triangle to the graph
    *@param[in] a, b, c are all valid nodes in the trigraph
@@ -225,17 +430,17 @@ class Mesh {
    * Complexity: O(d) d is the degree of a node
    */
   Triangle add_triangle(const Node& a, const Node& b, const Node& c){
-    T new_triangle;
+    internal_triangle_value new_triangle;
     //add edge in graph
-    Edge edge0 = graph_.add_edge(a, b);    
+    auto edge0 = graph_.add_edge(graph_.node(a.index()), graph_.node(b.index()));    
     new_triangle.nodes[0] = c.index();
     new_triangle.edges[0] = edge0.index();
     
-    Edge edge1 = graph_.add_edge(b, c);    
+    auto edge1 = graph_.add_edge(graph_.node(b.index()), graph_.node(c.index()));    
     new_triangle.nodes[1] = a.index();
     new_triangle.edges[1] = edge1.index();
     
-    Edge edge2 = graph_.add_edge(a, c);    
+    auto edge2 = graph_.add_edge(graph_.node(a.index()), graph_.node(c.index()));    
     new_triangle.nodes[2] = b.index();
     new_triangle.edges[2] = edge2.index();    
     double xa = a.position().x;
@@ -321,54 +526,184 @@ class Mesh {
     return Triangle(this,i);
   }
   
-  /** Return the first triangle adjacent to the input edge.
-     * @param[in] e, an edge inside the mesh
-     * @pre @a e.index() < graph_->num_edges()
-     * @post result.uid_ == graph_->get_edge_value(edge_uid).F_triangle1.
-     * Complexity: O(1).
-     */
-  Triangle triangle1(const Edge& e){
-    return Triangle(this,graph_.edges[e.index()].triangle1);
-  }
+  
+  // /** Return the first triangle adjacent to the input edge.
+  //    * @param[in] e, an edge inside the mesh
+  //    * @pre @a e.index() < graph_->num_edges()
+  //    * @post result.uid_ == graph_->get_edge_value(edge_uid).F_triangle1.
+  //    * Complexity: O(1).
+  //    */
+  // Triangle triangle1(const Edge& e){
+  //   return Triangle(this,graph_.edges[e.index()].triangle1);
+  // }
 
-  /** Return the second triangle adjacent to the input edge.
-     * @param[in] e, an edge inside the mesh
-     * @pre @a e.index() < graph_->num_edges()
-     * @post result.uid_ == graph_->get_edge_value(edge_uid).F_triangle2.
-     * Complexity: O(1).
-     */
-  Triangle triangle2(const Edge& e){
-    return Triangle(this,graph_.edges[e.index()].triangle2);
-  }
+  // /** Return the second triangle adjacent to the input edge.
+  //    * @param[in] e, an edge inside the mesh
+  //    * @pre @a e.index() < graph_->num_edges()
+  //    * @post result.uid_ == graph_->get_edge_value(edge_uid).F_triangle2.
+  //    * Complexity: O(1).
+  //    */
+  // Triangle triangle2(const Edge& e){
+  //   return Triangle(this,graph_.edges[e.index()].triangle2);
+  // }
+
+  class NodeIterator:private totally_ordered<NodeIterator> {
+   public:
+    // These type definitions help us use STL's iterator_traits.
+    /** Element type. */
+    typedef Node value_type;
+    /** Type of pointers to elements. */
+    typedef Node* pointer;
+    /** Type of references to elements. */
+    typedef Node& reference;
+    /** Iterator category. */
+    typedef std::input_iterator_tag iterator_category;
+    /** Difference between iterators */
+    typedef std::ptrdiff_t difference_type;
+
+    /** Construct an invalid NodeIterator. */
+    NodeIterator() {
+    }
+
+    //return the Node pointed by the interator
+    Node operator*() const{
+      return mesh_->node((*it_).index());
+    }
+
+    NodeIterator& operator++(){
+      ++it_;
+      return *this;
+    }
+
+    bool operator==(const NodeIterator& x) const{
+      return (it_ == x.it_);
+    }
+
+  private:
+    friend class Mesh;
+    Mesh* mesh_;
+    typename GraphType::node_iterator it_;
+    //private constructor for graph to construct NodeIterator instance
+    NodeIterator(const Mesh* mesh, typename GraphType::node_iterator it)
+      : mesh_(const_cast<Mesh*>(mesh)), it_(it){
+      }
+
+  };
 
 
   /* Return an iterator points to the first node in graph_.
      * Complexity: O(1).
      */
   node_iterator  node_begin(){
-    return graph_.node_begin();
+    return NodeIterator(this, graph_.node_begin());
   }
 
     /* Return an iterator points to the last node in graph_.
      * Complexity: O(1).
      */
   node_iterator node_end(){
-    return graph_.node_end();
+    return NodeIterator(this, graph_.node_end());
   }
+
+  class EdgeIterator:private totally_ordered<EdgeIterator> {
+   public:
+    // These type definitions help us use STL's iterator_traits.
+    /** Element type. */
+    typedef Edge value_type;
+    /** Type of pointers to elements. */
+    typedef Edge* pointer;
+    /** Type of references to elements. */
+    typedef Edge& reference;
+    /** Iterator category. */
+    typedef std::input_iterator_tag iterator_category;
+    /** Difference between iterators */
+    typedef std::ptrdiff_t difference_type;
+
+    /** Construct an invalid EdgeIterator. */
+    EdgeIterator() {
+    }
+
+    //return the Edge pointed by the interator
+    Edge operator*() const{
+      return mesh_->edge((*it_).index());
+    }
+
+    EdgeIterator& operator++(){
+      ++it_;
+      return *this;
+    }
+
+    bool operator==(const EdgeIterator& x) const{
+      return (it_ == x.it_);
+    }
+
+  private:
+    friend class Mesh;
+    Mesh* mesh_;
+    typename GraphType::edge_iterator it_;
+    //private constructor for graph to construct EdgeIterator instance
+    EdgeIterator(const Mesh* mesh, typename GraphType::edge_iterator it)
+      : mesh_(const_cast<Mesh*>(mesh)), it_(it){
+      }
+  };
+
+
     
     /* Return an iterator points to the first edge in graph_.
      * Complexity: O(1).
      */
   edge_iterator edge_begin(){
-    return graph_.edge_begin();
+    return EdgeIterator(this, graph_.edge_begin());
   }
 
     /* Return an iterator points to the last edge in graph_.
      * Complexity: O(1).
      */
   edge_iterator edge_end(){
-    return graph_.edge_end();
+    return EdgeIterator(this, graph_.edge_end());
   }
+
+  class IncidentEdgeIterator:private totally_ordered<IncidentEdgeIterator> {
+   public:
+    // These type definitions help us use STL's iterator_traits.
+    /** Element type. */
+    typedef Edge value_type;
+    /** Type of pointers to elements. */
+    typedef Edge* pointer;
+    /** Type of references to elements. */
+    typedef Edge& reference;
+    /** Iterator category. */
+    typedef std::input_iterator_tag iterator_category;
+    /** Difference between iterators */
+    typedef std::ptrdiff_t difference_type;
+
+    /** Construct an invalid IncidentEdgeIterator. */
+    IncidentEdgeIterator() {
+    }
+
+    //return the Edge pointed by the interator
+    Edge operator*() const{
+      return mesh_->edge((*it_).index());
+    }
+
+    EdgeIterator& operator++(){
+      ++it_;
+      return *this;
+    }
+
+    bool operator==(const EdgeIterator& x) const{
+      return (it_ == x.it_);
+    }
+
+  private:
+    friend class Mesh;
+    Mesh* mesh_;
+    typename GraphType::incident_iterator it_;
+    //private constructor for graph to construct EdgeIterator instance
+    IncidentEdgeIterator(const Mesh* mesh, typename GraphType::incident_iterator it)
+      : mesh_(const_cast<Mesh*>(mesh)), it_(it){
+      }
+  };
 
 
   //Iterator that iterates through the adjacent triangle of a node
@@ -426,7 +761,8 @@ class Mesh {
         size_type i = 0;
         while(old.node(i).index() != last_)
           ++i;
-        if (old.edge(i).value().triangle1 == unsigned(-1) || old.edge(i).value().triangle2 == unsigned(-1)){
+        if (old.mesh_->graph_.edge(old.edge(i).index()).value().triangle1 == unsigned(-1) || 
+          old.mesh_->graph_.edge(old.edge(i).index()).value().triangle2 == unsigned(-1)){
           if (t2_ == unsigned(-1))
             t_ = -1;
           else{
@@ -440,10 +776,10 @@ class Mesh {
             last_ = old.edge(i).node2().index();
           else
             last_ = old.edge(i).node1().index();
-          if (old.edge(i).value().triangle1 == t_)
-            t_ = old.edge(i).value().triangle2;
+          if (old.mesh_->graph_.edge(old.edge(i).index()).value().triangle1 == t_)
+            t_ = old.mesh_->graph_.edge(old.edge(i).index()).value().triangle2;
           else
-            t_ = old.edge(i).value().triangle1;
+            t_ = old.mesh_->graph_.edge(old.edge(i).index()).value().triangle1;
         }
       }
       return *this;
@@ -487,8 +823,8 @@ class Mesh {
       othernode = start.node1().index();
 
     
-    return IncidentIterator_Node(this, n.index(), start.value().triangle1, 
-      start.value().triangle2, othernode, othernode);
+    return IncidentIterator_Node(this, n.index(), graph_.edge(start.index()).value().triangle1, 
+      graph_.edge(start.index()).value().triangle2, othernode, othernode);
 
   }
 
@@ -646,7 +982,34 @@ class Mesh {
   }
 
 
-//private:
+private:
+
+  struct internal_triangle_value
+  {
+    triangle_value_type value;
+    std::vector<size_type> nodes; //a vector storing the uids of the three nodes of this triangle
+    std::vector<size_type> edges; //a vector storing the uids of the three edges of this triangle
+    double area;  //the area of this triangle
+    std::vector<Point> n; //The unit normal vector of 3 edges
+    internal_triangle_value():value(triangle_value_type()), nodes(3,0),
+        edges(3,0), area(-1){}
+  };
+
+  struct internal_node_value
+  {
+    node_value_type value;
+    internal_node_value() {}
+    internal_node_value(const node_value_type& v):value(v){}
+  };
+
+  struct internal_edge_value
+  {
+    edge_value_type value;
+    size_type triangle1;
+    size_type triangle2;
+    internal_edge_value():triangle1(-1), triangle2(-1){}
+  };
+
   GraphType graph_; //a Graph Class object storing all the nodes and edges
-  std::vector<T> tri_vec; // a vector storing all the triangles' data
+  std::vector<internal_triangle_value> tri_vec; // a vector storing all the triangles' data
 };
