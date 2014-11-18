@@ -248,7 +248,7 @@ struct Dam
 
 
 
-void print(const MeshType& m, double t){
+/*void print(const MeshType& m, double t){
   unsigned int count = 0;
   for(auto it = m.triangle_begin(); it != m.triangle_end(); ++it){
     std::cout<<"Triangle: "<<count<<" @"<<t<<std::endl;
@@ -270,7 +270,7 @@ void print(const MeshType& m, double t){
     std::cout<<std::endl<<std::endl;
     count++;
   }
-}
+}*/
 
 
 
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
   // Set the initial conditions
   // Perform any needed precomputation
 
-  Wave<MeshType> init;
+  Dam<MeshType> init;
   for(auto it= mesh.node_begin(); it != mesh.node_end(); ++it){
     init(*it);
   }
