@@ -32,28 +32,16 @@ struct NodeData
   QVar Q;
   NodeData():Q(0.0,0.0,0.0){}
 };
-struct EdgeData
-{
-  size_type triangle1;
-  size_type triangle2;
-  EdgeData():triangle1(-1), triangle2(-1){}
-};
 
 /** @struct Mesh::TriData
    * information associated with triangles
    */    
 struct TriData{
-  std::vector<size_type> nodes; //a vector storing the uids of the three nodes of this triangle
-  std::vector<size_type> edges; //a vector storing the uids of the three edges of this triangle
   QVar Q;  //Qk: the average value of Q inside this triangle
-  double area;  //the area of this triangle
   std::vector<QVar> F; //The transition over an edge
-  std::vector<Point> n; //The unit normal vector of 3 edges
-  /**construct an invalid TriData*/
-  TriData(): nodes(3,0),edges(3,0),Q(QVar()),area(-1), F(3,QVar(0,0,0)){
-  }
+  TriData():Q(QVar()), F(3, QVar()){}
 };
-typedef Mesh<NodeData,EdgeData,TriData> MeshType;
+typedef Mesh<NodeData,bool,TriData> MeshType;
 
 
 /** Function object for calculating shallow-water flux.
@@ -148,9 +136,9 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
   return t + dt;
   #else
   for(auto i = m.edge_begin(); i != m.edge_end(); ++i){
-    if ((*i).value().triangle1 != (unsigned) -1 && (*i).value().triangle2 != (unsigned) -1 ){
-      MeshType::Triangle trik = m.triangle((*i).value().triangle1);
-      MeshType::Triangle trim = m.triangle((*i).value().triangle2);
+    if ((*i).triangle1().index() != (unsigned) -1 && (*i).triangle2().index() != (unsigned) -1 ){
+      MeshType::Triangle trik = (*i).triangle1();
+      MeshType::Triangle trim = (*i).triangle2();
       unsigned int edge_k = 0;
       unsigned int edge_m = 0;
       //which edge (*i) is in trik and trim
@@ -160,31 +148,31 @@ double hyperbolic_step(MESH& m, FLUX& f, double t, double dt) {
       while(trim.node(edge_m).index()== (*i).node1().index() 
         || trim.node(edge_m).index()== (*i).node2().index() )
         ++edge_m;
-      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), trim.Q());
-      trik.F(edge_k) = flux;
-      trim.F(edge_m) = -flux;
+      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.value().Q, trim.value().Q);
+      trik.value().F[edge_k] = flux;
+      trim.value().F[edge_m] = -flux;
     }
     else{
       MeshType::Triangle trik;
-      if ((*i).value().triangle1 != (unsigned) -1)
-        trik = m.triangle((*i).value().triangle1);
+      if ((*i).triangle1().index() != (unsigned) -1)
+        trik = (*i).triangle1();
       else
-        trik = m.triangle((*i).value().triangle2);
+        trik = (*i).triangle2();
       unsigned int edge_k = 0;
       while(trik.node(edge_k).index()== (*i).node1().index() 
         || trik.node(edge_k).index()== (*i).node2().index() )
         ++edge_k;
-      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.Q(), QVar(trik.Q().h, 0, 0));
-      trik.F(edge_k) = flux;
+      QVar flux = f(trik.normal(edge_k).x, trik.normal(edge_k).y, dt, trik.value().Q, QVar(trik.value().Q.h, 0, 0));
+      trik.value().F[edge_k] = flux;
     }
   }
 
   for(auto i = m.triangle_begin(); i != m.triangle_end(); ++i){
     QVar sum = QVar(0, 0, 0);
     for (int j = 0; j < 3; ++j){
-      sum += (*i).F(j);
+      sum += (*i).value().F[j];
     }
-    (*i).Q() = (*i).Q()-dt/(*i).area()*sum;
+    (*i).value().Q = (*i).value().Q-dt/(*i).area()*sum;
   }
   
   return t + dt;
@@ -197,14 +185,12 @@ void post_process(MESH& m) {
   // HW4B: Post-processing step
   // Translate the triangle-averaged values to node-averaged values
   // Implement Equation 9 from your pseudocode here
-
-  
   for (auto it = m.node_begin(); it != m.node_end(); ++it){
     double sumarea=0;
     QVar sumQ = QVar(0, 0, 0);
     for(auto j = m.triangle_begin(*it); j != m.triangle_end(*it); ++j){
       sumarea += (*j).area();
-      sumQ += (*j).Q() * (*j).area();
+      sumQ += (*j).value().Q * (*j).area();
     }
     (*it).value().Q = sumQ/sumarea;
   }
@@ -254,19 +240,19 @@ void print(const MeshType& m, double t){
     std::cout<<"Triangle: "<<count<<" @"<<t<<std::endl;
     std::cout<<"Area: "<<(*it).area()<<std::endl;
     std::cout<<"Node: "<<(*it).node(0).position()<<"||"<<(*it).node(1).position()<<"||"<<(*it).node(2).position()<<std::endl;
-    std::cout<<"QVar: "<<"h:"<<(*it).Q().h<<"  hu:"<<(*it).Q().hx<<"  hv:"<<(*it).Q().hy<<std::endl;
+    std::cout<<"QVar: "<<"h:"<<(*it).value().Q.h<<"  hu:"<<(*it).value().Q.hx<<"  hv:"<<(*it).value().Q.hy<<std::endl;
     std::cout<<"Edge 0  "<<(*it).edge(0).node1().position()<<"  "<<(*it).edge(0).node2().position()<<std::endl;
     std::cout<<"   Normal: "<<(*it).normal(0)<<std::endl;
-    std::cout<<"   Adj Tri: "<<(*it).edge(0).value().triangle1<<"  "<<(*it).edge(0).value().triangle2<<std::endl;
-    std::cout<<"   Edge flux: "<<"h:"<<(*it).F(0).h<<"  hu:"<<(*it).F(0).hx<<"  hv:"<<(*it).F(0).hy<<std::endl;
+    std::cout<<"   Adj Tri: "<<(*it).edge(0).triangle1().index()<<"  "<<(*it).edge(0).triangle2().index()<<std::endl;
+    std::cout<<"   Edge flux: "<<"h:"<<(*it).value().F[0].h<<"  hu:"<<(*it).value().F[0].hx<<"  hv:"<<(*it).value().F[0].hy<<std::endl;
     std::cout<<"Edge 1  "<<(*it).edge(1).node1().position()<<"  "<<(*it).edge(1).node2().position()<<std::endl;
     std::cout<<"   Normal: "<<(*it).normal(1)<<std::endl;
-    std::cout<<"   Adj Tri: "<<(*it).edge(1).value().triangle1<<"  "<<(*it).edge(1).value().triangle2<<std::endl;
-    std::cout<<"   Edge flux: "<<"h:"<<(*it).F(1).h<<"  hu:"<<(*it).F(1).hx<<"  hv:"<<(*it).F(1).hy<<std::endl;
+    std::cout<<"   Adj Tri: "<<(*it).edge(1).triangle1().index()<<"  "<<(*it).edge(1).triangle2().index()<<std::endl;
+    std::cout<<"   Edge flux: "<<"h:"<<(*it).value().F[1].h<<"  hu:"<<(*it).value().F[1].hx<<"  hv:"<<(*it).value().F[1].hy<<std::endl;
     std::cout<<"Edge 2  "<<(*it).edge(2).node1().position()<<"  "<<(*it).edge(2).node2().position()<<std::endl;
     std::cout<<"   Normal: "<<(*it).normal(2)<<std::endl;
-    std::cout<<"   Adj Tri: "<<(*it).edge(2).value().triangle1<<"  "<<(*it).edge(2).value().triangle2<<std::endl;
-    std::cout<<"   Edge flux: "<<"h:"<<(*it).F(2).h<<"  hu:"<<(*it).F(2).hx<<"  hv:"<<(*it).F(2).hy<<std::endl;
+    std::cout<<"   Adj Tri: "<<(*it).edge(2).triangle1().index()<<"  "<<(*it).edge(2).triangle2().index()<<std::endl;
+    std::cout<<"   Edge flux: "<<"h:"<<(*it).value().F[2].h<<"  hu:"<<(*it).value().F[2].hx<<"  hv:"<<(*it).value().F[2].hy<<std::endl;
     std::cout<<"node0:Q: "<<(*it).node(0).value().Q.h<<"  "<<(*it).node(0).value().Q.hx<<"  "<<(*it).node(0).value().Q.hy<<std::endl;
     std::cout<<"node1:Q: "<<(*it).node(1).value().Q.h<<"  "<<(*it).node(1).value().Q.hx<<"  "<<(*it).node(1).value().Q.hy<<std::endl;
     std::cout<<"node2:Q: "<<(*it).node(2).value().Q.h<<"  "<<(*it).node(2).value().Q.hx<<"  "<<(*it).node(2).value().Q.hy<<std::endl;
@@ -327,18 +313,18 @@ int main(int argc, char* argv[])
 
   // Set triangle values
   for (auto it=mesh.triangle_begin(); it!=mesh.triangle_end(); ++it) {
-    (*it).Q() = QVar(0.0,0.0,0.0);
-    (*it).Q() += (*it).node(0).value().Q;
-    (*it).Q() += (*it).node(1).value().Q;
-    (*it).Q() += (*it).node(2).value().Q;
-    (*it).Q() /= 3.0;
+    (*it).value().Q = QVar(0.0,0.0,0.0);
+    (*it).value().Q += (*it).node(0).value().Q;
+    (*it).value().Q += (*it).node(1).value().Q;
+    (*it).value().Q += (*it).node(2).value().Q;
+    (*it).value().Q /= 3.0;
   }
-
  
 
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
   viewer.launch();
+
 
   // HW4B: Need to define Mesh::node_type and node/edge iterator
   // before these can be used!
@@ -349,6 +335,7 @@ int main(int argc, char* argv[])
   viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
 #endif
   viewer.center_view();
+
 
   // HW4B: Timestep
   // CFL stability condition requires dt <= dx / max|velocity|
@@ -377,7 +364,7 @@ int main(int argc, char* argv[])
   double dt = 0.1;
 #endif
   double t_start = 0;
-  double t_end = 10;
+  double t_end = 0.49;
 
   // Preconstruct a Flux functor
   EdgeFluxCalculator f;
