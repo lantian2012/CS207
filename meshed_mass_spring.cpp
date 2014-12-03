@@ -200,6 +200,30 @@ struct DampingForce
 };
 double DampingForce::c = 0;
 
+
+// The wind force
+struct WindForce {
+  WindForce(Point wind): w(wind) {}
+
+  template <typename NODE>
+  Point operator()(NODE n, double t) {
+    double c = 1.0;
+    auto normal = Point(0,0,0);
+    for (auto it=n.triangle_begin(); it!=n.triangle_end(); ++it){
+      normal = normal + (*it).normal();
+    }
+    normal = normal/norm(normal);
+    (void) t;
+    return c*dot((w-n.value().velocity),normal)*normal;
+  }
+
+ private:
+  Point w;
+};
+
+
+
+
 //Force function which represents the combined effects of F1 and F2
 template<typename F1,typename F2>
 struct CombinedForce{
@@ -211,6 +235,8 @@ struct CombinedForce{
     return (force1(n, 0)+force2(n, 0));
   }
 };
+
+
 
 //Combine the effects of two forces
 template<typename F1,typename F2>
@@ -303,9 +329,12 @@ int main(int argc, char** argv) {
   double t_start = 0.0;
   double t_end   = 5.0;
 
+  WindForce wind_force(Point(0,1,0));
+  
   for (double t = t_start; t < t_end; t += dt) {
     //std::cout << "t = " << t << std::endl;
-    symp_euler_step(mesh, t, dt, make_combined_force(GravityForce(), MassSpringForce(), DampingForce()));
+    symp_euler_step(mesh, t, dt, make_combined_force(GravityForce(), MassSpringForce(), make_combined_force(DampingForce(), wind_force)));
+    
 
     // Update viewer with nodes' new positions
     //viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
@@ -321,8 +350,8 @@ int main(int argc, char** argv) {
 
     // These lines slow down the animation for small graphs, like grid0_*.
     // Feel free to remove them or tweak the constants.
-    if (mesh.num_nodes() < 100)
-      CS207::sleep(0.001);
+   // if (mesh.num_nodes() < 100)
+   //   CS207::sleep(0.001);
   }
 
   return 0;
