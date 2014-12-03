@@ -78,7 +78,7 @@ struct ConstantConstraint
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       auto n = *it;
-      if (n.position() == Point(1, 0.5, 0) || n.position() == Point(1, -0.5, 0)){
+      if (n.position() == Point(-1, 1, 0) || n.position() == Point(1, 1, 0)){
         n.value().velocity = Point(0, 0, 0);
       }
     }
@@ -121,8 +121,8 @@ CombinedConstraint<C1, C2, G> make_combined_constraint(C1 c1, C2 c2, G& g){
  */
 template <typename G, typename F>
 double symp_euler_step(G& g, double t, double dt, F force) {
-  //auto constraint = make_combined_constraint(make_combined_constraint(ConstantConstraint<G>(), SphereConstraint<G>(), g), PlaneConstraint<G>(), g);
-  auto constraint = ConstantConstraint<G>();
+  auto constraint = make_combined_constraint(make_combined_constraint(ConstantConstraint<G>(), SphereConstraint<G>(), g), PlaneConstraint<G>(), g);
+  //auto constraint = ConstantConstraint<G>();
   constraint(g, 0);
   // Compute the {n+1} node positions
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
@@ -179,7 +179,11 @@ struct MassSpringForce
     //add up all spring forces
     for (auto it = n.edge_begin(); it != n.edge_end(); ++it){
       Edge incident = *it;
-      spring += ((incident.value().K)*(incident.node2().position()-incident.node1().position())/incident.length()*(incident.length()-incident.value().L));
+
+      if(incident.node1()==n)
+        spring += ((incident.value().K)*(incident.node2().position()-incident.node1().position())/incident.length()*(incident.length()-incident.value().L));
+      else
+        spring += ((incident.value().K)*(incident.node1().position()-incident.node2().position())/incident.length()*(incident.length()-incident.value().L));
     }
     (void) t;
     return spring;
@@ -278,14 +282,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it)
-  {
-    for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
-       std::cout<<(*j).value().L<<std::endl;
-       std::cout<<(*j).value().K<<std::endl;
-    }
-  }
-
   //set the damping force constriant
   DampingForce::c = float(1)/mesh.num_nodes();
   
@@ -309,7 +305,7 @@ int main(int argc, char** argv) {
 
   for (double t = t_start; t < t_end; t += dt) {
     //std::cout << "t = " << t << std::endl;
-    symp_euler_step(mesh, t, dt, Problem1Force());
+    symp_euler_step(mesh, t, dt, make_combined_force(GravityForce(), MassSpringForce(), DampingForce()));
 
     // Update viewer with nodes' new positions
     //viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
@@ -325,9 +321,8 @@ int main(int argc, char** argv) {
 
     // These lines slow down the animation for small graphs, like grid0_*.
     // Feel free to remove them or tweak the constants.
-    //if (mesh.num_nodes() < 100)
-    //  CS207::sleep(0.001);
-    CS207::sleep(0.02);
+    if (mesh.num_nodes() < 100)
+      CS207::sleep(0.001);
   }
 
   return 0;
