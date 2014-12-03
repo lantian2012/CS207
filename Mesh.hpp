@@ -110,6 +110,8 @@ class Mesh {
   /** Synonym for IncidentIterator_Triangle */
   typedef IncidentIterator_Triangle incidentiterator_triangle;
 
+  class IncidentIterator_Node;
+  typedef IncidentIterator_Node incidentiterator_node;
   class IncidentEdgeIterator;
   typedef IncidentEdgeIterator incident_edge_iterator;
 
@@ -218,6 +220,35 @@ class Mesh {
      */
     incident_edge_iterator edge_end() const{
       return IncidentEdgeIterator(mesh_, mesh_->graph_.node(uid_).edge_end());
+    }
+
+    /* Get the iterator that points to the first adjacent triangle of a node
+     * @param n The node in the center
+     * @return the iterator that points to the first adjacent triangle of @a n
+     * @post result.n_ == n.uid_
+     * @post result.t_ result.t2_ are the adjacent triangles of edge(n_, result.last_)
+     * @post result.last_ == result.first_
+     */
+    IncidentIterator_Node triangle_begin(){
+      Edge start = *(edge_begin());
+      size_type othernode;
+      if (start.node1().index() == index())
+        othernode = start.node2().index();
+      else
+        othernode = start.node1().index();
+      return IncidentIterator_Node(mesh_, index(), mesh_->graph_.edge(start.index()).value().triangle1, 
+        mesh_->graph_.edge(start.index()).value().triangle2, othernode, othernode);
+    }
+
+    /* Get the iterator that points to an invalid triangle of a node
+     * @param n The node in the center
+     * @return the iterator that points to an invalid triangle of @a n
+     * @post result.n_ == n.uid_
+     * @post result.t_ == -1
+     */
+    IncidentIterator_Node triangle_end(){
+      return IncidentIterator_Node(mesh_, index(), -1, 
+        -1, -1, -1);
     }
 
   private:

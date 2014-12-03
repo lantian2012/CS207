@@ -78,7 +78,7 @@ struct ConstantConstraint
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       auto n = *it;
-      if (n.position() == Point(-1, 1, 0) || n.position() == Point(1, 1, 0)){
+      if (n.position() == Point(1, 1, 0) || n.position() == Point(1, -1, 0)){
         n.value().velocity = Point(0, 0, 0);
       }
     }
@@ -121,7 +121,7 @@ CombinedConstraint<C1, C2, G> make_combined_constraint(C1 c1, C2 c2, G& g){
  */
 template <typename G, typename F>
 double symp_euler_step(G& g, double t, double dt, F force) {
-  auto constraint = make_combined_constraint(make_combined_constraint(ConstantConstraint<G>(), SphereConstraint<G>(), g), PlaneConstraint<G>(), g);
+  auto constraint = make_combined_constraint(ConstantConstraint<G>(), PlaneConstraint<G>(), g);
   //auto constraint = ConstantConstraint<G>();
   constraint(g, 0);
   // Compute the {n+1} node positions
@@ -207,12 +207,15 @@ struct WindForce {
 
   template <typename NODE>
   Point operator()(NODE n, double t) {
-    double c = 1.0;
+    double c = 0.04;
     auto normal = Point(0,0,0);
     for (auto it=n.triangle_begin(); it!=n.triangle_end(); ++it){
-      normal = normal + (*it).normal();
+      Point tnorm;
+      tnorm = cross((*it).node(0).position()-(*it).node(1).position(), 
+        (*it).node(0).position()-(*it).node(2).position());
+      tnorm = tnorm/norm(tnorm);
+      normal = normal + tnorm;
     }
-    normal = normal/norm(normal);
     (void) t;
     return c*dot((w-n.value().velocity),normal)*normal;
   }
@@ -299,6 +302,8 @@ int main(int argc, char** argv) {
     (*it).value().mass = float(1)/mesh.num_nodes();
     (*it).value().velocity = Point(0, 0, 0);
   }
+
+
   //set K and L for each edge
   for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it)
   {
@@ -314,6 +319,7 @@ int main(int argc, char** argv) {
   // Print out the stats
   std::cout << mesh.num_nodes() << " " << mesh.num_edges() << std::endl;
 
+
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
   auto node_map = viewer.empty_node_map(mesh);
@@ -327,13 +333,13 @@ int main(int argc, char** argv) {
   // Begin the mass-spring simulation
   double dt = 0.001;
   double t_start = 0.0;
-  double t_end   = 5.0;
+  double t_end   = 10.0;
 
-  WindForce wind_force(Point(0,1,0));
+  WindForce wind_force(Point(0.5,0.5,0));
   
   for (double t = t_start; t < t_end; t += dt) {
     //std::cout << "t = " << t << std::endl;
-    symp_euler_step(mesh, t, dt, make_combined_force(GravityForce(), MassSpringForce(), make_combined_force(DampingForce(), wind_force)));
+    symp_euler_step(mesh, t, dt, make_combined_force(GravityForce(), MassSpringForce(), wind_force));
     
 
     // Update viewer with nodes' new positions
@@ -352,6 +358,7 @@ int main(int argc, char** argv) {
     // Feel free to remove them or tweak the constants.
    // if (mesh.num_nodes() < 100)
    //   CS207::sleep(0.001);
+    CS207::sleep(0.001);
   }
 
   return 0;
