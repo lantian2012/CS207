@@ -393,7 +393,9 @@ class Mesh {
     /**return the area of this triangle
      *Comlexity = O(1)
      */
-    double area() const{
+    double area() {
+      mesh_->tri_vec[uid_].area = norm(cross(node(0).position()-node(1).position(), 
+        node(0).position()-node(2).position()))/2;
       return mesh_->tri_vec[uid_].area;
     }
     /**return the index of the triangle
