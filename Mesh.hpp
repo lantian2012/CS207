@@ -155,6 +155,10 @@ class Mesh {
       return mesh_->graph_.node(uid_).position();
     }
 
+    Point& position(){
+      return mesh_->graph_.node(uid_).position();
+    }
+
     /** Return this node's index, a number in the range [0, graph_size()). */
     size_type index() const {
       return uid_;
@@ -301,12 +305,12 @@ class Mesh {
     
     //Return the user-specifies value of this edge
     edge_value_type& value(){
-      return mesh_->graph_->edge(uid_).value().value;
+      return mesh_->graph_.edge(uid_).value().value;
     }
 
     //Return the user-specifies value of this edge
     const edge_value_type& value() const{
-      return mesh_->graph_->edge(uid_).value().value;
+      return mesh_->graph_.edge(uid_).value().value;
     }
 
     size_type index() const{
@@ -686,12 +690,12 @@ class Mesh {
       return mesh_->edge((*it_).index());
     }
 
-    EdgeIterator& operator++(){
+    IncidentEdgeIterator& operator++(){
       ++it_;
       return *this;
     }
 
-    bool operator==(const EdgeIterator& x) const{
+    bool operator==(const IncidentEdgeIterator& x) const{
       return (it_ == x.it_);
     }
 

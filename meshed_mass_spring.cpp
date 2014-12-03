@@ -14,7 +14,7 @@
 #include "CS207/Util.hpp"
 #include "CS207/Color.hpp"
 
-#include "Graph.hpp"
+#include "Mesh.hpp"
 #include "Point.hpp"
 
 
@@ -34,13 +34,14 @@ struct EdgeData{
 };
 
 
-typedef Graph<NodeData, EdgeData> GraphType;
-typedef typename GraphType::node_type Node;
-typedef typename GraphType::edge_type Edge;
+typedef Mesh<NodeData, EdgeData, bool> MeshType;
+typedef typename MeshType::node_type Node;
+typedef typename MeshType::edge_type Edge;
 
+template<typename G>
 struct PlaneConstraint
 {
-  void operator()(GraphType& g, double){
+  void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       Node node = (*it);
@@ -52,11 +53,12 @@ struct PlaneConstraint
   }
 };
 
+template<typename G>
 struct SphereConstraint
 {
   Point c = Point(0.5, 0.5, -0.5);
   double r = 0.15;
-  void operator()(GraphType& g, double){
+  void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       Node node = (*it);
@@ -69,51 +71,36 @@ struct SphereConstraint
   }
 };
 
-struct SphereRemoveConstraint
-{
-  Point c = Point(0.5, 0.5, -0.5);
-  double r = 0.15;
-  void operator()(GraphType& g, double){
-    auto it = g.node_begin();
-    while(it != g.node_end()){
-      if (norm((*it).position() - c) < r){
-        it = g.remove_node(it);
-      }
-      else
-        ++it;
-    }
-  }
-};
-
-
+template<typename G>
 struct ConstantConstraint
 {
-  void operator()(GraphType& g, double){
+  void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       auto n = *it;
-      if (n.position() == Point(0, 0, 0) || n.position() == Point(1, 0, 0)){
+      if (n.position() == Point(1, 0.5, 0) || n.position() == Point(1, -0.5, 0)){
         n.value().velocity = Point(0, 0, 0);
       }
     }
   }
 };
 
-template<typename C1, typename C2>
+template<typename C1, typename C2, typename G>
 struct CombinedConstraint
 {
   C1 cons1;
   C2 cons2;
   CombinedConstraint(C1 c1=C1(), C2 c2=C2()):cons1(c1), cons2(c2){}
-  void operator()(GraphType& g, double){
+  void operator()(G& g, double){
     cons1(g, 0);
     cons2(g, 0);
   }
 };
 
-template<typename C1, typename C2>
-CombinedConstraint<C1, C2> make_combined_constraint(C1 c1 = C1(), C2 c2 = C2()){
-  return CombinedConstraint<C1, C2>(c1, c2);
+template<typename C1, typename C2, typename G>
+CombinedConstraint<C1, C2, G> make_combined_constraint(C1 c1, C2 c2, G& g){
+  (void) g;
+  return CombinedConstraint<C1, C2, G>(c1, c2);
 }
 
 
@@ -134,28 +121,19 @@ CombinedConstraint<C1, C2> make_combined_constraint(C1 c1 = C1(), C2 c2 = C2()){
  */
 template <typename G, typename F>
 double symp_euler_step(G& g, double t, double dt, F force) {
-  auto constraint = make_combined_constraint(make_combined_constraint(ConstantConstraint(), SphereRemoveConstraint()), PlaneConstraint());
+  //auto constraint = make_combined_constraint(make_combined_constraint(ConstantConstraint<G>(), SphereConstraint<G>(), g), PlaneConstraint<G>(), g);
+  auto constraint = ConstantConstraint<G>();
+  constraint(g, 0);
   // Compute the {n+1} node positions
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
-    if (n.position() != Point(0, 0, 0) && n.position() != Point(1, 0, 0)){
-      // Update the position of the node according to its velocity
-      // x^{n+1} = x^{n} + v^{n} * dt
-      n.position() += n.value().velocity * dt;
-    }
+    n.position() += n.value().velocity * dt;
   }
-  constraint(g, 0);
   // Compute the {n+1} node velocities
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
-    //if (n.position() != Point(0, 0, 0) && n.position() != Point(1, 0, 0)){
-      // v^{n+1} = v^{n} + F(x^{n+1},t) * dt / m
-      //n.value().velocity += force(n, t) * (dt / n.value().mass);
-    //}
     n.value().velocity += force(n, t) * (dt / n.value().mass);
-
   }
-
   return t + dt;
 }
 
@@ -169,8 +147,8 @@ struct Problem1Force {
    * model that by returning a zero-valued force. */
   Point operator()(Node n, double t) {
     //constrain the corners
-    if (n.position() == Point(0, 0, 0) || n.position() == Point(1, 0, 0))
-      return Point(0, 0, 0);
+    //if (n.position() == Point(0, 0, 0) || n.position() == Point(1, 0, 0))
+    //  return Point(0, 0, 0);
     Point spring = Point(0, 0, 0);  //spring force
     Point gravity;   //gravity force
     gravity = Point(0, 0, -grav)*n.value().mass;
@@ -253,62 +231,74 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  // Construct a graph
-  GraphType graph;
+  // Construct a mesh
+  MeshType mesh;
 
-  // Create a nodes_file from the first input argument
+ #if 1
+  std::vector<typename MeshType::node_type> mesh_node;
+ #endif
+
+  // Read all Points and add them to the Mesh
   std::ifstream nodes_file(argv[1]);
-  // Interpret each line of the nodes_file as a 3D Point and add to the Graph
-  std::vector<Node> nodes;
   Point p;
-  while (CS207::getline_parsed(nodes_file, p))
-    nodes.push_back(graph.add_node(p));
-
-  // Create a tets_file from the second input argument
-  std::ifstream tets_file(argv[2]);
-  // Interpret each line of the tets_file as four ints which refer to nodes
-  std::array<int,4> t;
-  while (CS207::getline_parsed(tets_file, t)) {
-    for (unsigned i = 1; i < t.size(); ++i) {
-      graph.add_edge(nodes[t[0]], nodes[t[1]]);
-      graph.add_edge(nodes[t[0]], nodes[t[2]]);
+  while (CS207::getline_parsed(nodes_file, p)) {
+    // HW4B: Need to implement add_node before this can be used!
 #if 1
-      // Diagonal edges
-      graph.add_edge(nodes[t[0]], nodes[t[3]]);
-      graph.add_edge(nodes[t[1]], nodes[t[2]]);
+    mesh_node.push_back(mesh.add_node(p));
 #endif
-      graph.add_edge(nodes[t[1]], nodes[t[3]]);
-      graph.add_edge(nodes[t[2]], nodes[t[3]]);
-    }
   }
+
+  // Read all mesh triangles and add them to the Mesh
+  std::ifstream tris_file(argv[2]);
+  std::array<int,3> t;
+  while (CS207::getline_parsed(tris_file, t)) {
+    // HW4B: Need to implement add_triangle before this can be used!
+#if 1
+    mesh.add_triangle(mesh_node[t[0]], mesh_node[t[1]], mesh_node[t[2]]);
+#endif
+  }
+
+  // Print out the stats
+  std::cout << mesh.num_nodes() << " "
+            << mesh.num_edges() << " "
+            << mesh.num_triangles() << std::endl;
 
 
   //set the mass and velocity of each Node
-  for (auto it = graph.node_begin(); it != graph.node_end(); ++it){
-    (*it).value().mass = float(1)/graph.size();
+  for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it){
+    (*it).value().mass = float(1)/mesh.num_nodes();
     (*it).value().velocity = Point(0, 0, 0);
   }
   //set K and L for each edge
-  for (auto it = graph.node_begin(); it != graph.node_end(); ++it)
+  for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it)
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
        (*j).value().K = 100;
     }
   }
-  //set the dumping force constriant
-  DampingForce::c = float(1)/graph.num_nodes();
+
+  for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it)
+  {
+    for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
+       std::cout<<(*j).value().L<<std::endl;
+       std::cout<<(*j).value().K<<std::endl;
+    }
+  }
+
+  //set the damping force constriant
+  DampingForce::c = float(1)/mesh.num_nodes();
   
   // Print out the stats
-  std::cout << graph.num_nodes() << " " << graph.num_edges() << std::endl;
+  std::cout << mesh.num_nodes() << " " << mesh.num_edges() << std::endl;
 
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
-  auto node_map = viewer.empty_node_map(graph);
+  auto node_map = viewer.empty_node_map(mesh);
   viewer.launch();
 
-  viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
-  viewer.add_edges(graph.edge_begin(), graph.edge_end(), node_map);
+  viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
+  viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
 
   viewer.center_view();
 
@@ -319,7 +309,7 @@ int main(int argc, char** argv) {
 
   for (double t = t_start; t < t_end; t += dt) {
     //std::cout << "t = " << t << std::endl;
-    symp_euler_step(graph, t, dt, make_combined_force(GravityForce(), MassSpringForce(), DampingForce()));
+    symp_euler_step(mesh, t, dt, Problem1Force());
 
     // Update viewer with nodes' new positions
     //viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
@@ -330,13 +320,14 @@ int main(int argc, char** argv) {
     viewer.clear();
     node_map.clear();
     //update viewer with new positions and new edges
-    viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
-    viewer.add_edges(graph.edge_begin(), graph.edge_end(), node_map);
+    viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
+    viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
 
     // These lines slow down the animation for small graphs, like grid0_*.
     // Feel free to remove them or tweak the constants.
-    if (graph.size() < 100)
-      CS207::sleep(0.001);
+    //if (mesh.num_nodes() < 100)
+    //  CS207::sleep(0.001);
+    CS207::sleep(0.02);
   }
 
   return 0;
