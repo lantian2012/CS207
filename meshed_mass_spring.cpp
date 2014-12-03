@@ -165,7 +165,8 @@ struct Problem1Force {
 //Force Function to calculate gravity
 struct GravityForce
 {
-  Point operator()(Node n, double t) {
+  template <typename NODE>
+  Point operator()(NODE n, double t) {
     (void) t;
     return (Point(0, 0, -grav)*n.value().mass);
   }
@@ -174,11 +175,12 @@ struct GravityForce
 //Force Function to calculate spring force
 struct MassSpringForce
 {
-  Point operator()(Node n, double t) {
+  template <typename NODE>
+  Point operator()(NODE n, double t) {
     Point spring = Point(0, 0, 0);  //spring force
     //add up all spring forces
     for (auto it = n.edge_begin(); it != n.edge_end(); ++it){
-      Edge incident = *it;
+      auto incident = *it;
 
       if(incident.node1()==n)
         spring += ((incident.value().K)*(incident.node2().position()-incident.node1().position())/incident.length()*(incident.length()-incident.value().L));
@@ -193,7 +195,8 @@ struct MassSpringForce
 //Force Function to calculate damp force
 struct DampingForce
 {
-  Point operator()(Node n, double ){
+  template <typename NODE>
+  Point operator()(NODE n, double ){
     return (-(c*n.value().velocity));
   }
   static double c;
