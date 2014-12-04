@@ -33,8 +33,13 @@ struct EdgeData{
   double K;
 };
 
+/** Custom structure of data to store with Triangles */
+struct TriData
+{
+  Point n; //the outward surface normal vector
+};
 
-typedef Mesh<NodeData, EdgeData, bool> MeshType;
+typedef Mesh<NodeData, EdgeData, TriData> MeshType;
 typedef typename MeshType::node_type Node;
 typedef typename MeshType::edge_type Edge;
 
@@ -45,8 +50,8 @@ struct PlaneConstraint
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       Node node = (*it);
-      if (dot(node.position(), Point(0, 0, 1)) < -0.75){
-        node.position().elem[2] = -0.75;
+      if (dot(node.position(), Point(0, 0, 1)) < -1.5){
+        node.position().elem[2] = -1.5;
         node.value().velocity.elem[2] = 0;
       }
     }
@@ -124,16 +129,21 @@ double symp_euler_step(G& g, double t, double dt, F force) {
   auto constraint = make_combined_constraint(ConstantConstraint<G>(), PlaneConstraint<G>(), g);
   //auto constraint = ConstantConstraint<G>();
   constraint(g, 0);
+  //std::cout<<"position--------------"<<std::endl;
   // Compute the {n+1} node positions
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
     n.position() += n.value().velocity * dt;
+    //if(n.index() % 5 ==0)
+      //std::cout<<n.position()<<std::endl;
   }
   // Compute the {n+1} node velocities
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
-    n.value().velocity += force(n, t) * (dt / n.value().mass);
+    n.value().velocity += force(n, t, g) * (dt / n.value().mass);
   }
+  //for (auto it = g.triangle_begin(); it != g.triangle_end(); ++it)
+  //  std::cout<<"norm: "<<(*it).value().n<<std::endl;
   return t + dt;
 }
 
@@ -165,9 +175,10 @@ struct Problem1Force {
 //Force Function to calculate gravity
 struct GravityForce
 {
-  template <typename NODE>
-  Point operator()(NODE n, double t) {
+  template <typename NODE, typename G>
+  Point operator()(NODE n, double t, G& g) {
     (void) t;
+    (void) g;
     return (Point(0, 0, -grav)*n.value().mass);
   }
 };
@@ -175,8 +186,8 @@ struct GravityForce
 //Force Function to calculate spring force
 struct MassSpringForce
 {
-  template <typename NODE>
-  Point operator()(NODE n, double t) {
+  template <typename NODE, typename G>
+  Point operator()(NODE n, double t, G& g) {
     Point spring = Point(0, 0, 0);  //spring force
     //add up all spring forces
     for (auto it = n.edge_begin(); it != n.edge_end(); ++it){
@@ -188,6 +199,7 @@ struct MassSpringForce
         spring += ((incident.value().K)*(incident.node1().position()-incident.node2().position())/incident.length()*(incident.length()-incident.value().L));
     }
     (void) t;
+    (void) g;
     return spring;
   }
 };
@@ -195,8 +207,10 @@ struct MassSpringForce
 //Force Function to calculate damp force
 struct DampingForce
 {
-  template <typename NODE>
-  Point operator()(NODE n, double ){
+  template <typename NODE, typename G>
+  Point operator()(NODE n, double t, G& g){
+    (void) t;
+    (void) g;
     return (-(c*n.value().velocity));
   }
   static double c;
@@ -208,8 +222,8 @@ double DampingForce::c = 0;
 struct WindForce {
   WindForce(Point wind): w(wind) {}
 
-  template <typename NODE>
-  Point operator()(NODE n, double t) {
+  template <typename NODE, typename G>
+  Point operator()(NODE n, double t, G& g) {
     double c = 0.04;
     auto normal = Point(0,0,0);
     for (auto it=n.triangle_begin(); it!=n.triangle_end(); ++it){
@@ -220,6 +234,7 @@ struct WindForce {
       normal = normal + tnorm;
     }
     (void) t;
+    (void) g;
     return c*dot((w-n.value().velocity),normal)*normal;
   }
 
@@ -228,7 +243,59 @@ struct WindForce {
 };
 
 
+//the air pressure force
+struct PressureForce
+{
+  PressureForce(double p_out, double c): P_out(p_out), C(c) {}
 
+  template <typename NODE, typename G>
+  Point operator()(NODE n, double t, G& g) {
+
+    //if n.index()==0, update the volume, center and normal vector,
+    //P_diff, for each node
+    if(n.index() == 0){
+      //update the center
+      center = Point(0, 0, 0);
+      for (auto it=g.node_begin(); it != g.node_end(); ++it){
+        center += (*it).position()/g.num_nodes();
+      }
+
+      //update the outward normal vector
+      for (auto it=g.triangle_begin(); it != g.triangle_end(); ++it){
+        Point tnorm;
+        tnorm = cross((*it).node(0).position()-(*it).node(1).position(), 
+          (*it).node(0).position()-(*it).node(2).position());
+        if (dot(tnorm, center-(*it).node(0).position())>0)
+          tnorm = -tnorm;
+        tnorm = tnorm/norm(tnorm);
+        (*it).value().n = tnorm;
+      }
+      //update the Volume
+      V = 0;
+      for (auto it=g.triangle_begin(); it != g.triangle_end(); ++it){
+        V += (*it).value().n.z*(*it).area()*((*it).node(0).position().z +
+          (*it).node(1).position().z + (*it).node(2).position().z)/3;
+      }
+      //P_diff
+      P_diff = C/V - P_out;
+    }
+
+    //for any node, calculate the force
+    Point force = Point(0, 0, 0);
+    for (auto it=n.triangle_begin(); it != n.triangle_end(); ++it){
+      force += P_diff*(*it).area()*(*it).value().n/3;
+    }
+    (void) t;
+    //std::cout<<force<<std::endl;
+    return force;
+  }
+private:
+  double P_out; //the pressure outside the ball
+  double C;  //nRT
+  double V;  //the volumn of the ball
+  double P_diff; //P_inside-P_out
+  Point center; //The point in the center of the ball
+};
 
 //Force function which represents the combined effects of F1 and F2
 template<typename F1,typename F2>
@@ -236,13 +303,11 @@ struct CombinedForce{
   F1 force1;
   F2 force2;
   CombinedForce(F1 f1=F1(), F2 f2=F2()):force1(f1), force2(f2){}
-  Point operator() (Node n, double t){
-    (void) t;
-    return (force1(n, 0)+force2(n, 0));
+  template <typename NODE, typename G>
+  Point operator() (NODE n, double t, G& g){
+    return (force1(n, t, g)+force2(n, t, g));
   }
 };
-
-
 
 //Combine the effects of two forces
 template<typename F1,typename F2>
@@ -316,6 +381,7 @@ int main(int argc, char** argv) {
     }
   }
 
+
   //set the damping force constriant
   DampingForce::c = float(1)/mesh.num_nodes();
   
@@ -339,11 +405,12 @@ int main(int argc, char** argv) {
   double t_end   = 10.0;
 
   WindForce wind_force(Point(0.5,0.5,0));
+  PressureForce pressure_force(1, 100);
   
   for (double t = t_start; t < t_end; t += dt) {
     //std::cout << "t = " << t << std::endl;
-    symp_euler_step(mesh, t, dt, make_combined_force(GravityForce(), MassSpringForce(), wind_force));
-    
+    symp_euler_step(mesh, t, dt, make_combined_force(MassSpringForce(), make_combined_force(pressure_force, DampingForce())));
+    //symp_euler_step(mesh, t, dt, make_combined_force(MassSpringForce(), pressure_force, DampingForce()));
 
     // Update viewer with nodes' new positions
     //viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
