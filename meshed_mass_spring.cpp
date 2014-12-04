@@ -46,23 +46,24 @@ typedef typename MeshType::edge_type Edge;
 template<typename G>
 struct PlaneConstraint
 {
+  PlaneConstraint(double h): height(h) {}
   void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       Node node = (*it);
-      if (dot(node.position(), Point(0, 0, 1)) < -1.5){
-        node.position().elem[2] = -1.5;
+      if (dot(node.position(), Point(0, 0, 1)) < height){
+        node.position().elem[2] = height;
         node.value().velocity.elem[2] = 0;
       }
     }
   }
+  double height;
 };
 
 template<typename G>
 struct SphereConstraint
 {
-  Point c = Point(0.5, 0.5, -0.5);
-  double r = 0.15;
+  SphereConstraint(Point center, double radius):c(center), r(radius) {}
   void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
@@ -74,20 +75,25 @@ struct SphereConstraint
       }
     }
   }
+  Point c;
+  double r;
 };
 
 template<typename G>
 struct ConstantConstraint
 {
+  ConstantConstraint(Point P1, Point P2):p1(P1), p2(P2) {}
   void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
       auto n = *it;
-      if (n.position() == Point(1, 1, 0) || n.position() == Point(1, -1, 0)){
+      if (n.position() == p1 || n.position() == p2){
         n.value().velocity = Point(0, 0, 0);
       }
     }
   }
+  Point p1;
+  Point p2;
 };
 
 template<typename C1, typename C2, typename G>
@@ -126,51 +132,18 @@ CombinedConstraint<C1, C2, G> make_combined_constraint(C1 c1, C2 c2, G& g){
  */
 template <typename G, typename F>
 double symp_euler_step(G& g, double t, double dt, F force) {
-  auto constraint = make_combined_constraint(ConstantConstraint<G>(), PlaneConstraint<G>(), g);
-  //auto constraint = ConstantConstraint<G>();
-  constraint(g, 0);
-  //std::cout<<"position--------------"<<std::endl;
   // Compute the {n+1} node positions
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
     n.position() += n.value().velocity * dt;
-    //if(n.index() % 5 ==0)
-      //std::cout<<n.position()<<std::endl;
   }
   // Compute the {n+1} node velocities
   for (auto it = g.node_begin(); it != g.node_end(); ++it) {
     auto n = *it;
     n.value().velocity += force(n, t, g) * (dt / n.value().mass);
   }
-  //for (auto it = g.triangle_begin(); it != g.triangle_end(); ++it)
-  //  std::cout<<"norm: "<<(*it).value().n<<std::endl;
   return t + dt;
 }
-
-
-//Force Function
-struct Problem1Force {
-  /** Return the force being applied to @a n at time @a t.
-   *
-   * For HW2 #1, this is a combination of mass-spring force and gravity,
-   * except that points at (0, 0, 0) and (1, 0, 0) never move. We can
-   * model that by returning a zero-valued force. */
-  Point operator()(Node n, double t) {
-    //constrain the corners
-    //if (n.position() == Point(0, 0, 0) || n.position() == Point(1, 0, 0))
-    //  return Point(0, 0, 0);
-    Point spring = Point(0, 0, 0);  //spring force
-    Point gravity;   //gravity force
-    gravity = Point(0, 0, -grav)*n.value().mass;
-    //add up all spring forces
-    for (auto it = n.edge_begin(); it != n.edge_end(); ++it){
-      Edge incident = *it;
-      spring += ((incident.value().K)*(incident.node2().position()-incident.node1().position())/incident.length()*(incident.length()-incident.value().L));
-    }
-    (void) t;
-    return (spring+gravity);
-  }
-};
 
 //Force Function to calculate gravity
 struct GravityForce
@@ -207,15 +180,15 @@ struct MassSpringForce
 //Force Function to calculate damp force
 struct DampingForce
 {
+  DampingForce(double coef): c(coef) {}
   template <typename NODE, typename G>
   Point operator()(NODE n, double t, G& g){
     (void) t;
     (void) g;
     return (-(c*n.value().velocity));
   }
-  static double c;
+  double c;
 };
-double DampingForce::c = 0;
 
 
 // The wind force
@@ -224,7 +197,7 @@ struct WindForce {
 
   template <typename NODE, typename G>
   Point operator()(NODE n, double t, G& g) {
-    double c = 0.04;
+    double c = 0.00004;
     auto normal = Point(0,0,0);
     for (auto it=n.triangle_begin(); it!=n.triangle_end(); ++it){
       Point tnorm;
@@ -237,8 +210,6 @@ struct WindForce {
     (void) g;
     return c*dot((w-n.value().velocity),normal)*normal;
   }
-
- private:
   Point w;
 };
 
@@ -335,28 +306,19 @@ int main(int argc, char** argv) {
   // Construct a mesh
   MeshType mesh;
 
- #if 1
   std::vector<typename MeshType::node_type> mesh_node;
- #endif
-
   // Read all Points and add them to the Mesh
   std::ifstream nodes_file(argv[1]);
   Point p;
   while (CS207::getline_parsed(nodes_file, p)) {
-    // HW4B: Need to implement add_node before this can be used!
-#if 1
     mesh_node.push_back(mesh.add_node(p));
-#endif
   }
 
   // Read all mesh triangles and add them to the Mesh
   std::ifstream tris_file(argv[2]);
   std::array<int,3> t;
   while (CS207::getline_parsed(tris_file, t)) {
-    // HW4B: Need to implement add_triangle before this can be used!
-#if 1
     mesh.add_triangle(mesh_node[t[0]], mesh_node[t[1]], mesh_node[t[2]]);
-#endif
   }
 
   // Print out the stats
@@ -377,17 +339,9 @@ int main(int argc, char** argv) {
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
-       (*j).value().K = 100;
+       (*j).value().K = 500;
     }
   }
-
-
-  //set the damping force constriant
-  DampingForce::c = float(1)/mesh.num_nodes();
-  
-  // Print out the stats
-  std::cout << mesh.num_nodes() << " " << mesh.num_edges() << std::endl;
-
 
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
@@ -399,21 +353,26 @@ int main(int argc, char** argv) {
 
   viewer.center_view();
 
-  // Begin the mass-spring simulation
+  //Begin the mass-spring simulation
   double dt = 0.001;
   double t_start = 0.0;
   double t_end   = 10.0;
 
-  WindForce wind_force(Point(0.5,0.5,0));
+  //Initialize forces
+  WindForce wind_force(Point(0,2,0));
   PressureForce pressure_force(1, 100);
+  DampingForce damp_force(float(1)/mesh.num_nodes());
+  auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
+
+  //Initialize constriants
+  auto constraint = PlaneConstraint<MeshType>(-2.5);
+  //auto constraint = make_combined_constraint(,)
   
   for (double t = t_start; t < t_end; t += dt) {
-    //std::cout << "t = " << t << std::endl;
-    symp_euler_step(mesh, t, dt, make_combined_force(MassSpringForce(), make_combined_force(pressure_force, DampingForce())));
-    //symp_euler_step(mesh, t, dt, make_combined_force(MassSpringForce(), pressure_force, DampingForce()));
 
-    // Update viewer with nodes' new positions
-    //viewer.add_nodes(graph.node_begin(), graph.node_end(), node_map);
+    constraint(mesh, 0);
+    symp_euler_step(mesh, t, dt, force);
+
     viewer.set_label(t);
     
     //update with removed nodes
@@ -424,11 +383,9 @@ int main(int argc, char** argv) {
     viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
     viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
 
-    // These lines slow down the animation for small graphs, like grid0_*.
-    // Feel free to remove them or tweak the constants.
-   // if (mesh.num_nodes() < 100)
-   //   CS207::sleep(0.001);
-    CS207::sleep(0.001);
+    // These lines slow down the animation for small graphs
+    if (mesh.num_nodes() < 100)
+      CS207::sleep(0.001);
   }
 
   return 0;
