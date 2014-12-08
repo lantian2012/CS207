@@ -43,6 +43,7 @@ typedef Mesh<NodeData, EdgeData, TriData> MeshType;
 typedef typename MeshType::node_type Node;
 typedef typename MeshType::edge_type Edge;
 
+//
 template<typename G>
 struct PlaneConstraint
 {
@@ -339,7 +340,7 @@ int main(int argc, char** argv) {
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
-       (*j).value().K = 500;
+       (*j).value().K = 800;
     }
   }
 
@@ -354,7 +355,7 @@ int main(int argc, char** argv) {
   viewer.center_view();
 
   //Begin the mass-spring simulation
-  double dt = 0.001;
+  double dt = 0.0006;
   double t_start = 0.0;
   double t_end   = 10.0;
 
