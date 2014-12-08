@@ -205,6 +205,13 @@ class Mesh {
       return mesh_->graph_.node(uid_).value().value;
     }
 
+    /** Return the number of incident edges of this node
+     *  Incident are edges spawned by this node
+     */
+    size_type degree() const{
+      return mesh_->graph_.node(uid_).degree();
+    }
+
     /* Return an iterator that points to the first incident edge of this node
      * If degree()==0, the returned iterator value shall not be dereferenced
      */
