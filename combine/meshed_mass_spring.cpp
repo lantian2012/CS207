@@ -13,6 +13,8 @@
 #include "CS207/SDLViewer.hpp"
 #include "CS207/Util.hpp"
 #include "CS207/Color.hpp"
+#include "Viewer_Extension.hpp"
+#include "collision.hpp"
 
 #include "Mesh.hpp"
 #include "Point.hpp"
@@ -43,7 +45,6 @@ typedef Mesh<NodeData, EdgeData, TriData> MeshType;
 typedef typename MeshType::node_type Node;
 typedef typename MeshType::edge_type Edge;
 
-//
 template<typename G>
 struct PlaneConstraint
 {
@@ -59,6 +60,49 @@ struct PlaneConstraint
     }
   }
   double height;
+};
+
+template<typename G>
+struct CollisionConstraint
+{
+  CollisionConstraint(std::vector<unsigned> l1): list1(l1) {} 
+  void operator()(G& g1,G& g2, std::vector<unsigned> list1){
+    Point center1 = Point(0, 0, 0);
+      for (auto it=g1->node_begin(); it != g1->node_end(); ++it){
+        center1 += (*it).position()/g1->num_nodes();
+      }
+    Point center2 = Point(0, 0, 0);
+      for (auto it=g2->node_begin(); it != g2->node_end(); ++it){
+        center2 += (*it).position()/g2->num_nodes();
+      }
+    Point c0 = (center1+center2)/2;
+    Point n1 = (center0-center1)/norm(center0-center1);
+    Point n2 = (center0-center2)/norm(center0-center2);
+ 
+    for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
+      for(int i=0;i<3;++i){
+          Node node = g1.triangle(*it1).node(i);
+          Point p = node.position();
+          Point p1 = c0-p;
+          Point v = node.value().velocity;
+          Point v1 = c0-v;          
+          node.position() = dot(n1,p1)*n1+p;
+          node.value().velocity = v -dot(n1,v1)*(-n1); 
+      }
+    }
+    for (auto it2 = list2.begin(); it2 != list2.end(); ++it2){
+      for(int i=0;i<3;++i){
+          Node node = g2.triangle(*it2).node(i);
+          Point p = node.position();
+          Point p1 = c0-p;
+          Point v = node.value().velocity;
+          Point v1 = c0-v;          
+          node.position() = dot(n2,p1)*n2+p;
+          node.value().velocity = v -dot(n2,v1)*(-n2); 
+      }
+    }
+  }
+  std::vector<unsigned> touch_list;
 };
 
 template<typename G>
@@ -370,7 +414,7 @@ int main(int argc, char** argv) {
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
-       (*j).value().K = 8000;
+       (*j).value().K = 100;
     }
   }
 
@@ -383,24 +427,45 @@ int main(int argc, char** argv) {
   viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
 
   viewer.center_view();
+  
+
+
 
   //Begin the mass-spring simulation
-
   double dt = 0.0002;
   double t_start = 0.0;
   double t_end   = 10.0;
+  
+  
+  //three color parameter
+  int color1 = 1; 
+  int color2 = 1; 
+  int color3 = 1; 
+  
+  //Create listener
+  Pause_listener* pause = new Pause_listener(dt); 
+  Speed_listener* speed = new Speed_listener(dt, dt); 
+  XYZ_listener<MeshType>* xyz = new XYZ_listener<MeshType>(&mesh);
+  Color_listener* col = new Color_listener(&color1, &color2, &color3);
+  
+  //add listener
+  viewer.add_listener(pause);
+  viewer.add_listener(speed);
+  viewer.add_listener(xyz);
+  viewer.add_listener(col);
 
   //Initialize forces
-
-  WindForce wind_force(Point(10,80,60));
-  PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 600, &mesh);
+  WindForce wind_force(Point(-60,-60,0));
+  PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 500, &mesh);
   DampingForce damp_force(float(1)/mesh.num_nodes());
-  auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
+  //auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
+  auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(damp_force, wind_force));
   //Initialize constriants
-  //auto constraint = PlaneConstraint<MeshType>(-2.5);
-  auto constraint = BoxConstraint<MeshType>(-2.2,2.0,-2.0,1.8);
-  //auto constraint = make_combined_constraint(,)
+  //auto constraint = PlaneConstraint<MeshType>(-2);
+  //auto constraint = BoxConstraint<MeshType>(-2.2,2.0,-2.0,1.8);
   
+  //auto constraint = ConstantConstraint<MeshType>(Point(-1,1,0),Point(1,1,0));
+  auto constraint = make_combined_constraint(PlaneConstraint<MeshType>(-1),ConstantConstraint<MeshType>(Point(-1,1,0),Point(1,1,0)), mesh);
   for (double t = t_start; t < t_end; t += dt) {
 
     constraint(mesh, 0);
@@ -413,7 +478,7 @@ int main(int argc, char** argv) {
     viewer.clear();
     node_map.clear();
     //update viewer with new positions and new edges
-    viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
+    viewer.add_nodes(mesh.node_begin(), mesh.node_end(), color(color1, color2, color3), node_map);
     viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
 
     // These lines slow down the animation for small graphs
