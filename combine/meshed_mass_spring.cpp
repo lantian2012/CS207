@@ -18,6 +18,7 @@
 
 #include "Mesh.hpp"
 #include "Point.hpp"
+#include "collision.hpp"
 
 
 // Gravity in meters/sec^2
@@ -373,13 +374,14 @@ CombinedForce<CombinedForce<F1, F2>, F3> make_combined_force(F1 force1, F2 force
 
 int main(int argc, char** argv) {
   // Check arguments
-  if (argc < 3) {
+  if (argc < 5) {
     std::cerr << "Usage: " << argv[0] << " NODES_FILE TETS_FILE\n";
     exit(1);
   }
 
   // Construct a mesh
   MeshType mesh;
+  MeshType mesh2;
 
   std::vector<typename MeshType::node_type> mesh_node;
   // Read all Points and add them to the Mesh
@@ -396,10 +398,27 @@ int main(int argc, char** argv) {
     mesh.add_triangle(mesh_node[t[0]], mesh_node[t[1]], mesh_node[t[2]]);
   }
 
+  std::vector<typename MeshType::node_type> mesh_node2;
+  // Read all Points and add them to the Mesh
+  std::ifstream nodes_file2(argv[3]);
+  while (CS207::getline_parsed(nodes_file2, p)) {
+    mesh_node2.push_back(mesh2.add_node(p));
+  }
+
+  // Read all mesh triangles and add them to the Mesh
+  std::ifstream tris_file2(argv[4]);
+  while (CS207::getline_parsed(tris_file2, t)) {
+    mesh2.add_triangle(mesh_node2[t[0]], mesh_node2[t[1]], mesh_node2[t[2]]);
+  }
+
   // Print out the stats
   std::cout << mesh.num_nodes() << " "
             << mesh.num_edges() << " "
             << mesh.num_triangles() << std::endl;
+  std::cout << mesh2.num_nodes() << " "
+            << mesh2.num_edges() << " "
+            << mesh2.num_triangles() << std::endl;
+
 
 
   //set the mass and velocity of each Node
@@ -408,15 +427,28 @@ int main(int argc, char** argv) {
     (*it).value().velocity = Point(0, 0, 0);
   }
 
+  for (auto it = mesh2.node_begin(); it != mesh2.node_end(); ++it){
+    (*it).value().mass = float(1)/mesh.num_nodes();
+    (*it).value().velocity = Point(0, 0, 0);
+  }
 
   //set K and L for each edge
   for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it)
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
-       (*j).value().K = 100;
+       (*j).value().K = 8000;
     }
   }
+
+  for (auto it = mesh2.node_begin(); it != mesh2.node_end(); ++it)
+  {
+    for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
+       (*j).value().L = (*j).length();
+       (*j).value().K = 8000;
+    }
+  }
+
 
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
@@ -425,6 +457,8 @@ int main(int argc, char** argv) {
 
   viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
   viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
+  viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(), node_map);
+  viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map);
 
   viewer.center_view();
   
@@ -455,22 +489,24 @@ int main(int argc, char** argv) {
   viewer.add_listener(col);
 
   //Initialize forces
-  WindForce wind_force(Point(-60,-60,0));
-  PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 500, &mesh);
+  WindForce wind_force(Point(10,80,60));
+  PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 600, &mesh);
   DampingForce damp_force(float(1)/mesh.num_nodes());
-  //auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
-  auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(damp_force, wind_force));
+  auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
   //Initialize constriants
-  //auto constraint = PlaneConstraint<MeshType>(-2);
+  auto constraint = PlaneConstraint<MeshType>(-4);
   //auto constraint = BoxConstraint<MeshType>(-2.2,2.0,-2.0,1.8);
-  
-  //auto constraint = ConstantConstraint<MeshType>(Point(-1,1,0),Point(1,1,0));
-  auto constraint = make_combined_constraint(PlaneConstraint<MeshType>(-1),ConstantConstraint<MeshType>(Point(-1,1,0),Point(1,1,0)), mesh);
+  //auto constraint = make_combined_constraint(,)
   for (double t = t_start; t < t_end; t += dt) {
 
     constraint(mesh, 0);
     symp_euler_step(mesh, t, dt, force);
+    auto collision = collide_triangles_index(mesh.triangle_begin(), mesh.triangle_end(),
+      mesh2.triangle_begin(), mesh2.triangle_end());
+    auto collision1 = std::get<0>(collision);
+    auto collision2 = std::get<1>(collision);
 
+    std::cout<<collision1.size()<<"  "<<collision2.size()<<std::endl;
     viewer.set_label(t);
     
     //update with removed nodes
@@ -480,6 +516,8 @@ int main(int argc, char** argv) {
     //update viewer with new positions and new edges
     viewer.add_nodes(mesh.node_begin(), mesh.node_end(), color(color1, color2, color3), node_map);
     viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
+    viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(), color(color1, color2, color3), node_map);
+    viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map);
 
     // These lines slow down the animation for small graphs
     if (mesh.num_nodes() < 100)
