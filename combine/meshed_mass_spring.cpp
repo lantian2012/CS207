@@ -66,42 +66,41 @@ struct PlaneConstraint
 template<typename G>
 struct CollisionConstraint
 {
-  CollisionConstraint(std::vector<unsigned> l1,std::vector<unsigned> l2): list1(l1),list2(l2) {} 
-  void operator()(G& g1,G& g2, std::vector<unsigned> l1,std::vector<unsigned> l2){
+  void operator()(G& g1,G& g2, std::vector<unsigned> list1,std::vector<unsigned> list2){
     Point center1 = Point(0, 0, 0);
-      for (auto it=g1->node_begin(); it != g1->node_end(); ++it){
-        center1 += (*it).position()/g1->num_nodes();
+      for (auto it=g1.node_begin(); it != g1.node_end(); ++it){
+        center1 += (*it).position()/g1.num_nodes();
       }
     Point center2 = Point(0, 0, 0);
-      for (auto it=g2->node_begin(); it != g2->node_end(); ++it){
-        center2 += (*it).position()/g2->num_nodes();
+      for (auto it=g2.node_begin(); it != g2.node_end(); ++it){
+        center2 += (*it).position()/g2.num_nodes();
       }
-    Point c0 = (center1+center2)/2;
+    Point center0 = (center1+center2)/2;
     Point n1 = (center0-center1)/norm(center0-center1);
     Point n2 = (center0-center2)/norm(center0-center2);
  
     for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
-      Node node = (*it1);
+      Node node = g1.node(*it1);
       Point p = node.position();
-      Point p1 = c0-p;
+      Point p1 = center0-p;
       Point v = node.value().velocity;
-      Point v1 = c0-v;  
+      Point v1 = center0-v;  
       node.position() = dot(n1,p1)*n1+p;
       node.value().velocity = v -dot(n1,v1)*(-n1);             
     }
     
-    for (auto it2 = list1.begin(); it2 != list1.end(); ++it2){
-      Node node = (*it2);
+    for (auto it2 = list2.begin(); it2 != list2.end(); ++it2){
+      Node node = g2.node(*it2);
       Point p = node.position();
-      Point p1 = c0-p;
+      Point p1 = center0-p;
       Point v = node.value().velocity;
-      Point v1 = c0-v;  
+      Point v1 = center0-v;  
       node.position() = dot(n2,p1)*n2+p;
       node.value().velocity = v -dot(n2,v1)*(-n2);        
     }
   }
-  std::vector<unsigned> list1;
-  std::vector<unsigned> list2;
+  //std::vector<unsigned> list1;
+  //std::vector<unsigned> list2;
 };
 
 template<typename G>
@@ -435,7 +434,7 @@ int main(int argc, char** argv) {
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
-       (*j).value().K = 8000;
+       (*j).value().K = 16000;
     }
   }
 
@@ -443,7 +442,7 @@ int main(int argc, char** argv) {
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
-       (*j).value().K = 8000;
+       (*j).value().K = 16000;
     }
   }
 
@@ -498,7 +497,10 @@ int main(int argc, char** argv) {
   for (double t = t_start; t < t_end; t += dt) {
 
     constraint(mesh, 0);
+    constraint(mesh2, 0);
+    auto collision_constrain = CollisionConstraint<MeshType>();
     symp_euler_step(mesh, t, dt, force);
+    symp_euler_step(mesh2, t, dt, force);
     CollisionDetector<MeshType> c;
     c.add_object(mesh);
     c.add_object(mesh2);
@@ -515,8 +517,9 @@ int main(int argc, char** argv) {
         collision2.push_back(n.index());
     }
 
-    std::cout<<collision.size()<<"  "<<collision2.size()<<std::endl;
+    //std::cout<<collision.size()<<"  "<<collision2.size()<<std::endl;
     //std::cout<<count<<std::endl;
+    collision_constrain(mesh,mesh2,collision,collision2);
     viewer.set_label(t);
     
     //update with removed nodes
