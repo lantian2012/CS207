@@ -18,7 +18,7 @@
 
 #include "Mesh.hpp"
 #include "Point.hpp"
-#include "collision.hpp"
+#include "CollisionDetector.hpp"
 
 
 // Gravity in meters/sec^2
@@ -499,12 +499,24 @@ int main(int argc, char** argv) {
 
     constraint(mesh, 0);
     symp_euler_step(mesh, t, dt, force);
-    auto collision = collide_triangles_index(mesh.triangle_begin(), mesh.triangle_end(),
-      mesh2.triangle_begin(), mesh2.triangle_end());
-    auto collision1 = std::get<0>(collision);
-    auto collision2 = std::get<1>(collision);
+    CollisionDetector<MeshType> c;
+    c.add_object(mesh);
+    c.add_object(mesh2);
+    c.check_collisions();
+    std::vector<unsigned> collision;
+    std::vector<unsigned> collision2;
 
-    std::cout<<collision1.size()<<"  "<<collision2.size()<<std::endl;
+    for (auto it=c.begin(); it!= c.end(); ++it){
+      auto boom = *it;
+      Node n = boom.n1;
+      if (boom.mesh1 == &mesh)
+        collision.push_back(n.index());
+      if (boom.mesh1 == &mesh2)
+        collision2.push_back(n.index());
+    }
+
+    std::cout<<collision.size()<<"  "<<collision2.size()<<std::endl;
+    //std::cout<<count<<std::endl;
     viewer.set_label(t);
     
     //update with removed nodes
