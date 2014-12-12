@@ -190,6 +190,7 @@ struct color{
   
   template <typename NODE>
   CS207::Color operator()(const NODE& n) {
+    (void) n;
     return CS207::Color(a_, b_, c_); 
   }
 };

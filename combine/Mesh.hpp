@@ -368,7 +368,7 @@ class Mesh {
       }
   };
 
-  Edge edge(size_type i){
+  Edge edge(size_type i) const{
     return Edge(this, i);
   }
 
@@ -383,7 +383,7 @@ class Mesh {
      * @post result.index() == mesh_->tri_vec[uid_].nodes[i]
      * Complexity = O(1)
      */
-    Node node(size_type i) {
+    Node node(size_type i) const{
       size_type node_uid = mesh_->tri_vec[uid_].nodes[i];
       return mesh_->node(node_uid);
     }
@@ -392,7 +392,7 @@ class Mesh {
      * @post result.index() == mesh_->tri_vec[uid_].edges[i]
      * Complexity = O(1)
      */
-    Edge edge(size_type i) {
+    Edge edge(size_type i) const{
       size_type edge_uid = mesh_->tri_vec[uid_].edges[i];
       return mesh_->edge(edge_uid);
     }
