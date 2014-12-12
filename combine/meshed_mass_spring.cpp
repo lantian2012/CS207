@@ -66,8 +66,8 @@ struct PlaneConstraint
 template<typename G>
 struct CollisionConstraint
 {
-  CollisionConstraint(std::vector<unsigned> l1): list1(l1) {} 
-  void operator()(G& g1,G& g2, std::vector<unsigned> list1){
+  CollisionConstraint(std::vector<unsigned> l1,std::vector<unsigned> l2): list1(l1),list2(l2) {} 
+  void operator()(G& g1,G& g2, std::vector<unsigned> l1,std::vector<unsigned> l2){
     Point center1 = Point(0, 0, 0);
       for (auto it=g1->node_begin(); it != g1->node_end(); ++it){
         center1 += (*it).position()/g1->num_nodes();
@@ -81,29 +81,27 @@ struct CollisionConstraint
     Point n2 = (center0-center2)/norm(center0-center2);
  
     for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
-      for(int i=0;i<3;++i){
-          Node node = g1.triangle(*it1).node(i);
-          Point p = node.position();
-          Point p1 = c0-p;
-          Point v = node.value().velocity;
-          Point v1 = c0-v;          
-          node.position() = dot(n1,p1)*n1+p;
-          node.value().velocity = v -dot(n1,v1)*(-n1); 
-      }
+      Node node = (*it1);
+      Point p = node.position();
+      Point p1 = c0-p;
+      Point v = node.value().velocity;
+      Point v1 = c0-v;  
+      node.position() = dot(n1,p1)*n1+p;
+      node.value().velocity = v -dot(n1,v1)*(-n1);             
     }
-    for (auto it2 = list2.begin(); it2 != list2.end(); ++it2){
-      for(int i=0;i<3;++i){
-          Node node = g2.triangle(*it2).node(i);
-          Point p = node.position();
-          Point p1 = c0-p;
-          Point v = node.value().velocity;
-          Point v1 = c0-v;          
-          node.position() = dot(n2,p1)*n2+p;
-          node.value().velocity = v -dot(n2,v1)*(-n2); 
-      }
+    
+    for (auto it2 = list1.begin(); it2 != list1.end(); ++it2){
+      Node node = (*it2);
+      Point p = node.position();
+      Point p1 = c0-p;
+      Point v = node.value().velocity;
+      Point v1 = c0-v;  
+      node.position() = dot(n2,p1)*n2+p;
+      node.value().velocity = v -dot(n2,v1)*(-n2);        
     }
   }
-  std::vector<unsigned> touch_list;
+  std::vector<unsigned> list1;
+  std::vector<unsigned> list2;
 };
 
 template<typename G>
