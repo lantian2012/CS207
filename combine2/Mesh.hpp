@@ -156,6 +156,7 @@ class Mesh {
     const Point& position() const {
       return mesh_->graph_.node(uid_).position();
     }
+    
 
     Point& position(){
       return mesh_->graph_.node(uid_).position();

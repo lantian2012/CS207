@@ -491,7 +491,7 @@ int main(int argc, char** argv) {
   viewer.add_listener(col);
 
   //Initialize forces
-  WindForce wind_force(Point(0,500,200));
+  WindForce wind_force(Point(0,100,200));
   PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 2500, &mesh);
   DampingForce damp_force(float(1)/mesh.num_nodes());
   //auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
