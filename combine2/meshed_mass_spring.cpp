@@ -71,7 +71,7 @@ struct Ship {
    *  Create a generic ship that has weight, length, center_x, center_y, speed_x, speed_y set as default value
    *  Area can be changed and is calculated depending on the user need
    **/
-  Ship(): Weight(0.015), length(0.15), center_x(-0.8), center_y(-0.9), speed_x(0), speed_y(0) {
+  Ship(): Weight(1.5), length(1), center_x(0.0), center_y(0.0), speed_x(0), speed_y(0) {
     double e = length/2;
     Area = 3.1416 * e * e;
   }
@@ -133,7 +133,7 @@ double dx_value(double x, double y){
   if (x > 0) {
     x = -x;
   }
-  return 0.12*2*x+0*y;
+  return 0.2*0.12*2*x+0*y;
 };
 
 /** Source calculcator of partial derivative of y by varying position x and y
@@ -147,7 +147,7 @@ double dy_value(double x, double y){
   if (y > 0) {
     y = -y;
   }
-  return 0.15*2*y+0*x;
+  return 0.2*0.15*2*y+0*x;
 };
 
 
@@ -268,6 +268,7 @@ void post_process(MESH& m) {
       sumQ += (*j).value().Q * (*j).area();
     }
     (*it).value().Q = sumQ/sumarea;
+    (*it).position().z = (*it).value().Q.h-1;
   }
 }
 
@@ -676,6 +677,7 @@ struct CombinedForce{
   }
 };
 
+
 //Combine the effects of two forces
 template<typename F1,typename F2>
 CombinedForce<F1, F2> make_combined_force(F1 f1 = F1(), F2 f2 = F2()){
@@ -739,6 +741,16 @@ int main(int argc, char** argv) {
             << mesh2.num_edges() << " "
             << mesh2.num_triangles() << std::endl;
 
+  // set the position of the sphere
+  for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it){
+    (*it).position() *= 1;
+    (*it).position().z += 1.3;
+  }
+
+  for (auto it = mesh2.node_begin(); it != mesh2.node_end(); ++it){
+    (*it).position() *= 5;
+    //(*it).position().z += 1.2;
+  }
 
 
   //set the mass and velocity of each Node for Sphere
@@ -753,7 +765,7 @@ int main(int argc, char** argv) {
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
        (*j).value().L = (*j).length();
-       (*j).value().K = 16000;
+       (*j).value().K = 400;
     }
   }
 
@@ -769,12 +781,13 @@ int main(int argc, char** argv) {
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
   auto node_map = viewer.empty_node_map(mesh);
+  auto node_map2 = viewer.empty_node_map(mesh2);
   viewer.launch();
 
   viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
   viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
-  viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(), node_map);
-  viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map);
+  viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(),node_map2);
+  viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map2);
 
   viewer.center_view();
 
@@ -795,7 +808,8 @@ int main(int argc, char** argv) {
     }
   }
   double dt = 0.25 * min_edge_length / (sqrt(grav * max_height));
-  dt = 0.0002;
+  dt = 0.0013;
+  //dt = 0.0002;
 
   //Begin the mass-spring simulation
   double t_start = 0.0;
@@ -818,19 +832,19 @@ int main(int argc, char** argv) {
   Pause_listener* pause = new Pause_listener(dt); 
   Speed_listener* speed = new Speed_listener(dt, dt); 
   XYZ_listener<MeshType>* xyz = new XYZ_listener<MeshType>(&mesh);
-  Color_listener* col = new Color_listener(&color1, &color2, &color3);
+  //Color_listener* col = new Color_listener(&color1, &color2, &color3);
   
   //add listener
   viewer.add_listener(pause);
   viewer.add_listener(speed);
   viewer.add_listener(xyz);
-  viewer.add_listener(col);
+  //viewer.add_listener(col);
 
   //Initialize forces
-  WindForce wind_force(Point(10,80,60));
-  PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 600, &mesh);
+  WindForce wind_force(Point(0,0,0));
+  PressureForce<typename MeshType::node_type, MeshType> pressure_force(0.2, 1, &mesh);
   DampingForce damp_force(float(1)/mesh.num_nodes());
-  auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
+  //auto force = GravityForce();
   //Initialize constriants
   auto constraint = PlaneConstraint<MeshType>(-4);
   //auto constraint = BoxConstraint<MeshType>(-2.2,2.0,-2.0,1.8);
@@ -839,26 +853,34 @@ int main(int argc, char** argv) {
 
     //constraint(mesh, 0);
     //auto collision_constrain = CollisionConstraint<MeshType>();
+    CollisionDetector<MeshType> c;
+    c.add_object(mesh);
+    c.add_object(mesh2);
+    c.check_collisions();
+    std::vector<unsigned> collision;
+    std::vector<unsigned> collision2;
+
+    for (auto it=c.begin(); it!= c.end(); ++it){
+      auto boom = *it;
+      Node n = boom.n1;
+      if (boom.mesh1 == &mesh)
+        collision.push_back(n.index());
+      if (boom.mesh1 == &mesh2)
+        collision2.push_back(n.index());
+    }
+
+    wind_force.w.z = collision2.size() * 10;
+    obj_vector[0].Weight = collision2.size() * 100;
+    obj_vector[0].length = collision2.size() * 500;
+
+    auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
+
     symp_euler_step(mesh, t, dt, force);
     // Step forward in time with forward Euler
     hyperbolic_step2(mesh2, f, t, dt, obj_vector);
     // Update node values with triangle-averaged values
-    post_process(mesh);
-    // CollisionDetector<MeshType> c;
-    // c.add_object(mesh);
-    // c.add_object(mesh2);
-    // c.check_collisions();
-    // std::vector<unsigned> collision;
-    // std::vector<unsigned> collision2;
-
-    // for (auto it=c.begin(); it!= c.end(); ++it){
-    //   auto boom = *it;
-    //   Node n = boom.n1;
-    //   if (boom.mesh1 == &mesh)
-    //     collision.push_back(n.index());
-    //   if (boom.mesh1 == &mesh2)
-    //     collision2.push_back(n.index());
-    // }
+    post_process(mesh2);
+    
 
     //std::cout<<collision.size()<<"  "<<collision2.size()<<std::endl;
     //std::cout<<count<<std::endl;
@@ -866,14 +888,10 @@ int main(int argc, char** argv) {
     viewer.set_label(t);
     
     //update with removed nodes
-    //clear teh viewer's node
-    viewer.clear();
-    node_map.clear();
     //update viewer with new positions and new edges
     viewer.add_nodes(mesh.node_begin(), mesh.node_end(), color(color1, color2, color3), node_map);
-    viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
-    viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(), color(color1, color2, color3), node_map);
-    viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map);
+    viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(), color(color1, color2, color3), node_map2);
+    
 
     // These lines slow down the animation for small graphs
     if (mesh.num_nodes() < 100)
