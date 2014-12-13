@@ -307,9 +307,9 @@ struct ColorFunctor {
   };
 };
 
-template <typename Pred, typename It>
+template <typename Pred, typename It, typename G>
 class filter_iterator
-    : private equality_comparable<filter_iterator<Pred,It>> {
+    : private equality_comparable<filter_iterator<Pred,It,G>> {
  public:
   // Get all of the iterator traits and make them our own
   typedef typename std::iterator_traits<It>::value_type        value_type;
@@ -318,11 +318,12 @@ class filter_iterator
   typedef typename std::iterator_traits<It>::difference_type   difference_type;
   typedef typename std::input_iterator_tag                     iterator_category;
 
-  typedef filter_iterator<Pred,It> self_type;
+  typedef filter_iterator<Pred,It,G> self_type;
 
   // Constructor
-  filter_iterator(const Pred& p, const It& first, const It& last)
-      : p_(p), it_(first), end_(last) {
+  //filter_iterator<Pred,Iter>(p, it, end, mesh, list)
+  filter_iterator(const Pred& p, const It& first, const It& last,const G& m, std::vector<unsigned> l)
+      : p_(p), it_(first), end_(last),mesh(m),list(l) {
   }
 
   /** Return a new edge object filter_iterator itself pointing to
@@ -339,7 +340,7 @@ class filter_iterator
   self_type& operator++() {
     do {
       ++it_;
-    } while (it_ != end_ && !p_(*it_));
+    } while (it_ != end_ && !p_(mesh,list,*it_));
     return *this;
   }
   /** Test whether this IncidentIterator and @a st are equal.
@@ -354,6 +355,8 @@ class filter_iterator
   Pred p_;
   It it_;
   It end_;
+  G mesh; 
+  std::vector<unsigned> list;
 };
 
 /** Helper function for constructing filter_iterators.
@@ -363,12 +366,30 @@ class filter_iterator
  * std::vector<int> a = ...;
  * auto it = make_filtered(a.begin(), a.end(), [](int k) {return k % 2 == 0;});
  */
-template <typename Pred, typename Iter>
-filter_iterator<Pred,Iter> make_filtered(const Iter& it, const Iter& end,
-                                         const Pred& p) {
-  return filter_iterator<Pred,Iter>(p, it, end);
+template <typename Pred, typename Iter,typename G>
+filter_iterator<Pred,Iter,G> make_filtered(const Iter& it, const Iter& end,
+                                         const Pred& p,const G& mesh, std::vector<unsigned> list) {
+  return filter_iterator<Pred,Iter,G>(p, it, end, mesh, list);
 }
 
+//template<typename G,typename NODE>
+struct MyPredicate{
+  template<typename G,typename NODE>
+  bool operator()(G& g1,std::vector<unsigned> list1,const NODE& n) {
+    double z0=0;
+   for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
+      Node node = g1.node(*it1);
+      z0 += node.position().z;
+      //if(node.position().z>z0)
+      //  z0=node.position().z;
+    }
+    if (list1.size()==0)
+      return 1;
+    z0/=list1.size();
+    //std::cout<< (n.position().z >z0) << std::endl;
+    return ( n.position().z >z0 );
+  }
+};
 
 template<typename G>
 struct PlaneConstraint
@@ -851,7 +872,7 @@ int main(int argc, char** argv) {
   //auto constraint = make_combined_constraint(,)
   for (double t = t_start; t < t_end; t += dt) {
 
-    //constraint(mesh, 0);
+    constraint(mesh, 0);
     //auto collision_constrain = CollisionConstraint<MeshType>();
     CollisionDetector<MeshType> c;
     c.add_object(mesh);
@@ -869,6 +890,8 @@ int main(int argc, char** argv) {
         collision2.push_back(n.index());
     }
 
+    //std::cout<<collision2.size()<<std::endl;
+
     wind_force.w.z = collision2.size() * 10;
     obj_vector[0].Weight = collision2.size() * 100;
     obj_vector[0].length = collision2.size() * 500;
@@ -880,19 +903,21 @@ int main(int argc, char** argv) {
     hyperbolic_step2(mesh2, f, t, dt, obj_vector);
     // Update node values with triangle-averaged values
     post_process(mesh2);
-    
 
-    //std::cout<<collision.size()<<"  "<<collision2.size()<<std::endl;
-    //std::cout<<count<<std::endl;
-    //collision_constrain(mesh,mesh2,collision,collision2);
     viewer.set_label(t);
     
     //update with removed nodes
     //update viewer with new positions and new edges
-    viewer.add_nodes(mesh.node_begin(), mesh.node_end(), color(color1, color2, color3), node_map);
+    viewer.clear();
+    node_map.clear();
+    node_map2.clear();
+    auto it_begin = make_filtered(mesh.node_begin(), mesh.node_end(),MyPredicate(),mesh2,collision2);
+    auto it_end = make_filtered(mesh.node_end(), mesh.node_end(),MyPredicate(),mesh2,collision2);
+    viewer.add_nodes(it_begin, it_end, color(color1, color2, color3), node_map);
+    viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
+    //viewer.add_nodes(mesh.node_begin(), mesh.node_end(), color(color1, color2, color3), node_map);
     viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(), color(color1, color2, color3), node_map2);
-    
-
+    viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map2);
     // These lines slow down the animation for small graphs
     if (mesh.num_nodes() < 100)
       CS207::sleep(0.001);
