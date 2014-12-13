@@ -375,13 +375,14 @@ filter_iterator<Pred,Iter,G> make_filtered(const Iter& it, const Iter& end,
 struct MyPredicate{
   template<typename G,typename NODE>
   bool operator()(G& g1,std::vector<unsigned> list1,const NODE& n) {
-    double z0=-4;
+    double z0=0;
    for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
       Node node = g1.node(*it1);
       z0 += node.position().z;
     }
     z0/=list1.size();
     return ( n.position().z >z0 );
+    //return 0;
   }
 };
 
