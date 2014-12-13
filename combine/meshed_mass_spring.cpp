@@ -407,6 +407,11 @@ int main(int argc, char** argv) {
   while (CS207::getline_parsed(tris_file2, t)) {
     mesh2.add_triangle(mesh_node2[t[0]], mesh_node2[t[1]], mesh_node2[t[2]]);
   }
+  
+  for(auto it = mesh2.node_begin();it!=mesh2.node_end();++it){
+    (*it).position().elem[1] +=4 ;
+    (*it).position().elem[2] +=4 ;
+  }
 
   // Print out the stats
   std::cout << mesh.num_nodes() << " "
@@ -421,12 +426,12 @@ int main(int argc, char** argv) {
   //set the mass and velocity of each Node
   for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it){
     (*it).value().mass = float(1)/mesh.num_nodes();
-    (*it).value().velocity = Point(0, 0, 0);
+    (*it).value().velocity = Point(0, 10, 10);
   }
 
   for (auto it = mesh2.node_begin(); it != mesh2.node_end(); ++it){
     (*it).value().mass = float(1)/mesh.num_nodes();
-    (*it).value().velocity = Point(0, 0, 0);
+    (*it).value().velocity = Point(0, -10, -10);
   }
 
   //set K and L for each edge
@@ -486,10 +491,11 @@ int main(int argc, char** argv) {
   viewer.add_listener(col);
 
   //Initialize forces
-  WindForce wind_force(Point(10,80,60));
-  PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 600, &mesh);
+  WindForce wind_force(Point(0,500,200));
+  PressureForce<typename MeshType::node_type, MeshType> pressure_force(1, 2500, &mesh);
   DampingForce damp_force(float(1)/mesh.num_nodes());
-  auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
+  //auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
+  auto force = make_combined_force(MassSpringForce(), make_combined_force(pressure_force, damp_force, wind_force));
   //Initialize constriants
   auto constraint = PlaneConstraint<MeshType>(-4);
   //auto constraint = BoxConstraint<MeshType>(-2.2,2.0,-2.0,1.8);
