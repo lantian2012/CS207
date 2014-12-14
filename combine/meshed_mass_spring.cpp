@@ -523,8 +523,6 @@ int main(int argc, char** argv) {
         collision2.push_back(n.index());
     }
 
-    //std::cout<<collision.size()<<"  "<<collision2.size()<<std::endl;
-    //std::cout<<count<<std::endl;
     collision_constrain(mesh,mesh2,collision,collision2);
     viewer.set_label(t);
     
