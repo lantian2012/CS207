@@ -21,33 +21,83 @@
 // Gravity in meters/sec^2
 static constexpr double grav = 9.81;
 
-/** Custom structure of data to store with Nodes */
+/** 
+ * \struct NodeData
+ *
+ * \brief Custom structure of data to store with Nodes 
+ * 
+ * This struct stores data associated with each node.
+ * Users can store their own data as members, and add
+ * new member functions. However, users should NOT delete
+ * the @a velocity and @a mass defined here. 
+ */
 struct NodeData {
-  Point velocity;  //< Node velocity
-  double mass;     //< Node mass
+  Point velocity;  ///< Node velocity
+  double mass;     ///< Node mass
 };
 
-/** Custom structure of data to store with Edges */
+/** 
+ * \struct EdgeData
+ *
+ * \brief Custom structure of data to store with Edges
+ * 
+ * This struct stores data associated with each edge.
+ * Users can store their own data as members, and add
+ * new member functions. However, users should NOT delete
+ * the @a L and @a K defined here. 
+ */
 struct EdgeData{
-  double L;
-  double K;
+  double L;  ///< Edge length
+  double K;  ///< Edge spring constant (stiffness)
 };
 
-/** Custom structure of data to store with Triangles */
+/** 
+ * \struct TriData
+ *
+ * \brief Custom structure of data to store with Triangles
+ * 
+ * This struct stores data associated with each triangle.
+ * Users can store their own data as members, and add
+ * new member functions. However, users should NOT delete
+ * the @a n defined here. 
+ */
 struct TriData
 {
-  Point n; //the outward surface normal vector
+  Point n; ///<the outward surface normal vector of the triangle
 };
 
 typedef Mesh<NodeData, EdgeData, TriData> MeshType;
 typedef typename MeshType::node_type Node;
 typedef typename MeshType::edge_type Edge;
 
-//
+/** 
+ * \struct PlaneConstraint
+ *
+ * \brief Constraint that acts as a horizontal plane
+ * 
+ * This struct implements a constraint that acts like
+ * a plane. This struct can define a plane at any height.
+ * 
+ * \tparam G A class that satisfies the graph concept. 
+ */
 template<typename G>
 struct PlaneConstraint
 {
-  PlaneConstraint(double h): height(h) {} 
+  /** \brief Constructor Function
+   *  
+   * \param[in] h the height of the plane
+   */
+  PlaneConstraint(double h): height(h) {}
+
+  /** \brief Constrain nodes with plane constraints.
+    *  
+    * \param[in, out] g An object that satisfies the graph concept.
+    * 
+    * \param[in] t Time.(Not used here)
+    *
+    * This function sets the velocity and position of nodes, so 
+    * nodes will act as they reach a plane and bounce back.
+    */
   void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
@@ -58,13 +108,45 @@ struct PlaneConstraint
       }
     }
   }
-  double height;
+
+  double height; ///< The height of the plane.
 };
 
+
+/** 
+ * \struct BoxConstraint
+ *
+ * \brief Constraint that acts as a box
+ * 
+ * This struct implements a constraint that acts like
+ * a box. This struct can define four planes at any posistion.
+ * 
+ * \tparam G A class that satisfies the graph concept. 
+ */
 template<typename G>
 struct BoxConstraint
 {
+  /** \brief Constructor Function
+   *  
+   * \param[in] h1 The height of the plane at the bottom
+   *
+   * \param[in] h2 The height of the plane at the top 
+   *
+   * \param[in] left The posistion of the plane on the left
+   *
+   * \param[in] right The posistion of the plane on the right
+   */
   BoxConstraint(double h1, double h2, double left,double right ): h_lower(h1),h_upper(h2),l(left),r(right) {} 
+  
+  /** \brief Constrain nodes with box constraints.
+    *  
+    * \param[in, out] g An object that satisfies the graph concept.
+    * 
+    * \param[in] t Time.(Not used here)
+    *
+    * This function sets the velocity and position of nodes, so 
+    * nodes will act as they reach a box and bounce back.
+    */
   void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
@@ -87,36 +169,43 @@ struct BoxConstraint
       }
     }
   }
-  double h_lower;
-  double h_upper;
-  double l;
-  double r;
+  double h_lower; ///< The height of the plane at the bottom
+  double h_upper; ///< The height of the plane at the top
+  double l; ///< The posistion of the plane on the left
+  double r; ///< The posistion of the plane on the right
 
 };
 
-template<typename G>
-struct SphereConstraint
-{
-  SphereConstraint(Point center, double radius):c(center), r(radius) {}
-  void operator()(G& g, double){
-    for (auto it = g.node_begin(); it != g.node_end(); ++it)
-    {
-      Node node = (*it);
-      if (norm(node.position()-c) < r){
-        Point R = (node.position()-c)/norm(node.position()-c);
-        node.position() = c + R*r;
-        node.value().velocity = node.value().velocity - dot(node.value().velocity, R)*R;
-      }
-    }
-  }
-  Point c;
-  double r;
-};
-
+/** 
+ * \struct ConstantConstraint
+ *
+ * \brief Constraint that pins two points of a graph
+ * 
+ * This struct implements a constraint that pins two nodes of 
+ * a graph. This struct can define two points at any posistion.
+ * 
+ * \tparam G A class that satisfies the graph concept. 
+ */
 template<typename G>
 struct ConstantConstraint
 {
+  /** \brief Constructor Function
+   *  
+   * \param[in] P1 The first point to be pinned
+   *
+   * \param[in] P2 The second point to be pinned
+   */
   ConstantConstraint(Point P1, Point P2):p1(P1), p2(P2) {}
+
+  /** \brief Pins two nodes
+    *  
+    * \param[in, out] g An object that satisfies the graph concept.
+    * 
+    * \param[in] t Time.(Not used here)
+    *
+    * This function sets the velocity and position of two nodes, so 
+    * the two nodes will not move.
+    */
   void operator()(G& g, double){
     for (auto it = g.node_begin(); it != g.node_end(); ++it)
     {
@@ -126,10 +215,21 @@ struct ConstantConstraint
       }
     }
   }
-  Point p1;
-  Point p2;
+  Point p1; ///< The first point to be pinned
+  Point p2; ///< The second point to be pinned
 };
 
+
+/** 
+ * \struct CombinedConstraint
+ *
+ * \brief Constraint that combines two constraints
+ * 
+ * This struct implements a constraint that pins two nodes of 
+ * a graph. This struct can define two points at any posistion.
+ * 
+ * \tparam G A class that satisfies the graph concept. 
+ */
 template<typename C1, typename C2, typename G>
 struct CombinedConstraint
 {
@@ -323,10 +423,6 @@ CombinedForce<CombinedForce<F1, F2>, F3> make_combined_force(F1 force1, F2 force
 }
 
 
-
-
-
-
 int main(int argc, char** argv) {
   // Check arguments
   if (argc < 3) {
@@ -379,13 +475,12 @@ int main(int argc, char** argv) {
   auto node_map = viewer.empty_node_map(mesh);
   viewer.launch();
 
+  // Add nodes and edges to the viewer
   viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
   viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
-
   viewer.center_view();
 
   //Begin the mass-spring simulation
-
   double dt = 0.0002;
   double t_start = 0.0;
   double t_end   = 10.0;
@@ -403,7 +498,10 @@ int main(int argc, char** argv) {
   
   for (double t = t_start; t < t_end; t += dt) {
 
+    // Constrain the nodes' velocity and position
     constraint(mesh, 0);
+
+    // Update the position and velocity of nodes 
     symp_euler_step(mesh, t, dt, force);
 
     viewer.set_label(t);

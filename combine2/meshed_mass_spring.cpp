@@ -377,15 +377,15 @@ filter_iterator<Pred,Iter,G> make_filtered(const Iter& it, const Iter& end,
 struct MyPredicate{
   template<typename G,typename NODE>
   bool operator()(G& g1,std::vector<unsigned> list1,const NODE& n) {
+    if (list1.size()==0)
+      return 1;
     double z0=0;
-   for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
+    for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
       Node node = g1.node(*it1);
       z0 += node.position().z;
     }
-    if (list1.size()==0)
-      return 1;
     z0/=list1.size();
-    return ( n.position().z >z0 );
+    return (n.position().z > (z0-0.1));
   }
 };
 
@@ -720,7 +720,7 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  // Construct a mesh
+  // Construct two meshes
   MeshType mesh;
   MeshType mesh2;
 
@@ -771,15 +771,13 @@ int main(int argc, char** argv) {
     //(*it).position().z += 1.2;
   }
 
-
   //set the mass and velocity of each Node for Sphere
   for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it){
     (*it).value().mass = float(1)/mesh.num_nodes();
     (*it).value().velocity = Point(0, 0, 0);
   }
 
-
-  //set K and L for each edge for Sphere
+  //set K and L for each edge for spheres
   for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it)
   {
     for (auto j = (*it).edge_begin(); j != (*it).edge_end(); ++j){
@@ -793,6 +791,7 @@ int main(int argc, char** argv) {
     (*it).value().Q = QVar(1,0,0);
   }
 
+  //compute the Q  value for each triangle in mesh2
   for (auto it=mesh2.triangle_begin(); it!=mesh2.triangle_end(); ++it) {
     (*it).value().Q = ((*it).node(0).value().Q + (*it).node(1).value().Q + (*it).node(2).value().Q)/3;
   }
@@ -802,33 +801,32 @@ int main(int argc, char** argv) {
   auto node_map = viewer.empty_node_map(mesh);
   auto node_map2 = viewer.empty_node_map(mesh2);
   viewer.launch();
-
   viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
   viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
   viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(),node_map2);
   viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map2);
-
   viewer.center_view();
 
-  double min_edge_length = (*mesh2.edge_begin()).length();
-  
+  //compute the minimum edge length
+  double min_edge_length = (*mesh2.edge_begin()).length();  
   for (auto iter = mesh2.edge_begin(); iter != mesh2.edge_end(); ++iter) {
     if (min_edge_length > (*iter).length()) {
       min_edge_length = (*iter).length();
     }
   }
 
+  //compute the maximum height
   double max_height = mesh2.node(0).value().Q.h;
-
   for (auto iter = mesh2.node_begin(); iter != mesh2.node_end(); ++iter) {
     if (max_height < (*iter).value().Q.h) {
 
       max_height = (*iter).value().Q.h;
     }
   }
+  
+  //define the time step
   double dt = 0.25 * min_edge_length / (sqrt(grav * max_height));
   dt = 0.0013;
-  //dt = 0.0002;
 
   //Begin the mass-spring simulation
   double t_start = 0.0;
@@ -841,7 +839,7 @@ int main(int argc, char** argv) {
   std::vector<Ship> obj_vector;
   obj_vector.push_back(obj0);
   
-  
+ 
   //three color parameter
   int color1 = 1; 
   int color2 = 1; 
@@ -863,15 +861,15 @@ int main(int argc, char** argv) {
   WindForce wind_force(Point(0,0,0));
   PressureForce<typename MeshType::node_type, MeshType> pressure_force(0.2, 1, &mesh);
   DampingForce damp_force(float(1)/mesh.num_nodes());
-  //auto force = GravityForce();
+
   //Initialize constriants
   auto constraint = PlaneConstraint<MeshType>(-4);
-  //auto constraint = BoxConstraint<MeshType>(-2.2,2.0,-2.0,1.8);
-  //auto constraint = make_combined_constraint(,)
-  for (double t = t_start; t < t_end; t += dt) {
 
+ //simulation processing
+ for (double t = t_start; t < t_end; t += dt) {
     constraint(mesh, 0);
-    //auto collision_constrain = CollisionConstraint<MeshType>();
+    
+    //define a collision detector
     CollisionDetector<MeshType> c;
     c.add_object(mesh);
     c.add_object(mesh2);
@@ -879,6 +877,7 @@ int main(int argc, char** argv) {
     std::vector<unsigned> collision;
     std::vector<unsigned> collision2;
 
+    //find the corresponding mesh for each node
     for (auto it=c.begin(); it!= c.end(); ++it){
       auto boom = *it;
       Node n = boom.n1;
@@ -887,13 +886,13 @@ int main(int argc, char** argv) {
       if (boom.mesh1 == &mesh2)
         collision2.push_back(n.index());
     }
-
-    //std::cout<<collision2.size()<<std::endl;
-
+    
+    //recompute the wind force according to the current collision
     wind_force.w.z = collision2.size() * 10;
     obj_vector[0].Weight = collision2.size() * 100;
-    obj_vector[0].length = collision2.size() * 500;
+    obj_vector[0].length = collision2.size() * 1000;
 
+    //combine the forces
     auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
 
     symp_euler_step(mesh, t, dt, force);
@@ -901,21 +900,23 @@ int main(int argc, char** argv) {
     hyperbolic_step2(mesh2, f, t, dt, obj_vector);
     // Update node values with triangle-averaged values
     post_process(mesh2);
-
     viewer.set_label(t);
-    
-    //update with removed nodes
-    //update viewer with new positions and new edges
+  
+  
     viewer.clear();
     node_map.clear();
-    //node_map2.clear();
+    
+    //filter out the nodes above the water
     auto it_begin = make_filtered(mesh.node_begin(), mesh.node_end(),MyPredicate(),mesh2,collision2);
     auto it_end = make_filtered(mesh.node_end(), mesh.node_end(),MyPredicate(),mesh2,collision2);
+    
+    viewer.clear();
+    node_map.clear();
     viewer.add_nodes(it_begin, it_end, color(color1, color2, color3), node_map);
     viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
-    //viewer.add_nodes(mesh.node_begin(), mesh.node_end(), color(color1, color2, color3), node_map);
     viewer.add_nodes(mesh2.node_begin(), mesh2.node_end(), color(color1, color2, color3), node_map2);
     viewer.add_edges(mesh2.edge_begin(), mesh2.edge_end(), node_map2);
+   
     // These lines slow down the animation for small graphs
     if (mesh.num_nodes() < 100)
       CS207::sleep(0.001);
