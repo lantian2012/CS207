@@ -34,7 +34,7 @@ public:
   /** The number of levels in the MortonCoder. For simplicity, this is
    * kept fixed with a value of 5, which corresponds to a grid with
    * 2^5 cells in each dimension. */
-  static constexpr int NumLevels = 5;
+  static constexpr int NumLevels = 3;
   /** Type of MortonCoder. */
   typedef MortonCoder<NumLevels> MortonCoderType;
   /** Type of the Morton codes. */
