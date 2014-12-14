@@ -1,3 +1,7 @@
+/** @file Meshed_mass_spring.hpp
+ * @brief Add pressure and wind force to a mesh
+ */
+
 #ifndef CS207_MESHED_MASS_SPRING_HPP
 #define CS207_MESHED_MASS_SPRING_HPP
 #include <fstream>
