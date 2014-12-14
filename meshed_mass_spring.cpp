@@ -92,7 +92,6 @@ struct PlaneConstraint
   /** \brief Constrain nodes with plane constraints.
     *  
     * \param[in, out] g An object that satisfies the graph concept.
-    * 
     * \param[in] t Time.(Not used here)
     *
     * This function sets the velocity and position of nodes, so 
@@ -129,11 +128,8 @@ struct BoxConstraint
   /** \brief Constructor Function
    *  
    * \param[in] h1 The height of the plane at the bottom
-   *
    * \param[in] h2 The height of the plane at the top 
-   *
    * \param[in] left The posistion of the plane on the left
-   *
    * \param[in] right The posistion of the plane on the right
    */
   BoxConstraint(double h1, double h2, double left,double right ): h_lower(h1),h_upper(h2),l(left),r(right) {} 
@@ -141,7 +137,6 @@ struct BoxConstraint
   /** \brief Constrain nodes with box constraints.
     *  
     * \param[in, out] g An object that satisfies the graph concept.
-    * 
     * \param[in] t Time.(Not used here)
     *
     * This function sets the velocity and position of nodes, so 
@@ -192,7 +187,6 @@ struct ConstantConstraint
   /** \brief Constructor Function
    *  
    * \param[in] P1 The first point to be pinned
-   *
    * \param[in] P2 The second point to be pinned
    */
   ConstantConstraint(Point P1, Point P2):p1(P1), p2(P2) {}
@@ -200,7 +194,6 @@ struct ConstantConstraint
   /** \brief Pins two nodes
     *  
     * \param[in, out] g An object that satisfies the graph concept.
-    * 
     * \param[in] t Time.(Not used here)
     *
     * This function sets the velocity and position of two nodes, so 
@@ -225,23 +218,47 @@ struct ConstantConstraint
  *
  * \brief Constraint that combines two constraints
  * 
- * This struct implements a constraint that pins two nodes of 
- * a graph. This struct can define two points at any posistion.
+ * This struct implements a constraint that combines the  
+ * effects of two constraints.
  * 
  * \tparam G A class that satisfies the graph concept. 
+ * \tparam C1 A class that satisfies the constraint concept.
+ * \tparam C2 A class that satisfies the constraint concept.
  */
 template<typename C1, typename C2, typename G>
 struct CombinedConstraint
 {
-  C1 cons1;
-  C2 cons2;
+  C1 cons1; ///< The first constraint
+  C2 cons2; ///< The second constraint
+
+  /** \brief Constructor Function
+   *  
+   * \param[in] c1 The first constraint
+   * \param[in] c2 The first constraint
+   */
   CombinedConstraint(C1 c1=C1(), C2 c2=C2()):cons1(c1), cons2(c2){}
+  /** \brief Constrain the node with the effect of two constraints
+    *  
+    * \param[in, out] g An object that satisfies the graph concept.
+    * \param[in] t Time.(Not used here)
+    *
+    * This function sets the velocity and position nodes, so nodes 
+    * will act according to the combined effect of two constraints.
+    */
   void operator()(G& g, double){
     cons1(g, 0);
     cons2(g, 0);
   }
 };
 
+/** \brief Make a combined constraint from two constraints
+  *  
+  * \param[in] g An object that satisfies the graph concept.
+  * \param[in] c1 The first constraint
+  * \param[in] c2 The second constraint
+  *
+  * \return A constraint that acts as the combined effect of two constraints.
+  */
 template<typename C1, typename C2, typename G>
 CombinedConstraint<C1, C2, G> make_combined_constraint(C1 c1, C2 c2, G& g){
   (void) g;
@@ -250,19 +267,21 @@ CombinedConstraint<C1, C2, G> make_combined_constraint(C1 c1, C2 c2, G& g){
 
 
 
-/** Change a graph's nodes according to a step of the symplectic Euler
- *    method with the given node force.
- * @param[in,out] g      Graph
- * @param[in]     t      The current time (useful for time-dependent forces)
- * @param[in]     dt     The time step
- * @param[in]     force  Function object defining the force per node
- * @return the next time step (usually @a t + @a dt)
+/** \brief Change nodes according to the symplectic Euler method
+ * \param[in,out] g      Graph
+ * \param[in]     t      The current time (useful for time-dependent forces)
+ * \param[in]     dt     The time step
+ * \param[in]     force  Function object defining the force per node
+ * \return the next time step (usually @a t + @a dt)
  *
- * @tparam G::node_value_type supports ???????? YOU CHOOSE
- * @tparam F is a function object called as @a force(n, @a t),
+ * \tparam G A class that satisfies the graph concept. 
+ * \tparam F is a function object called as @a force(n, @a t),
  *           where n is a node of the graph and @a t is the current time.
  *           @a force must return a Point representing the force vector on Node
  *           at time @a t.
+ *
+ * Change a graph's nodes according to a step of the symplectic Euler
+ * method with the given node force.
  */
 template <typename G, typename F>
 double symp_euler_step(G& g, double t, double dt, F force) {
@@ -279,9 +298,23 @@ double symp_euler_step(G& g, double t, double dt, F force) {
   return t + dt;
 }
 
-//Force Function to calculate gravity
+
+/** 
+ * \struct GravityForce
+ *
+ * \brief Force Function to calculate gravity
+ */
 struct GravityForce
 {
+  /** \brief Calculate the gravity of a node 
+    *  
+    * \param[in] n The node to calculate the gravity
+    * \param[in] t Time.(Not used here)
+    *
+    * \tparam NODE a class that satisfies the Node concept
+    *
+    * \return The gravity of the node
+    */
   template <typename NODE>
   Point operator()(NODE n, double t) {
     (void) t;
@@ -289,9 +322,26 @@ struct GravityForce
   }
 };
 
-//Force Function to calculate spring force
+/** 
+ * \struct MassSpringForce
+ *
+ * \brief Force Function to the spring force on a node
+ */
 struct MassSpringForce
 {
+  /** \brief Calculate the spring force on a node
+    *  
+    * \param[in] n The node to calculate the gravity
+    * \param[in] t Time.(Not used here)
+    *
+    * \tparam NODE a class that satisfies the Node concept
+    *
+    * \return the spring force of the node
+    *
+    * This function calculates the spring force of a node
+    * The force is calcuated by Hook's law. The initial length
+    * of the spring can be set by the user.
+    */
   template <typename NODE>
   Point operator()(NODE n, double t) {
     Point spring = Point(0, 0, 0);  //spring force
@@ -309,23 +359,61 @@ struct MassSpringForce
   }
 };
 
-//Force Function to calculate damp force
+
+/** 
+ * \struct DampingForce
+ *
+ * \brief Force Function to calculate damp force
+ */
 struct DampingForce
 {
+  /** \brief Constructor Function
+   *  
+   * \param[in] coef The damping coefficient
+   */
   DampingForce(double coef): c(coef) {}
+  /** \brief Calculate the damping force on a node
+    *  
+    * \param[in] n The node to calculate the gravity
+    * \param[in] t Time.(Not used here)
+    *
+    * \tparam NODE a class that satisfies the Node concept
+    *
+    * \return the damping force of the node
+    */
   template <typename NODE>
   Point operator()(NODE n, double t){
     (void) t;
     return (-(c*n.value().velocity));
   }
-  double c;
+  double c; ///< The damping coefficient
 };
 
 
-// The wind force
+/** 
+ * \struct WindForce
+ *
+ * \brief Force Function to calculate wind force
+ */
 struct WindForce {
+  /** \brief Constructor Function
+   *  
+   * \param[in] wind The direction and strength of the wind force
+   */
   WindForce(Point wind): w(wind) {}
 
+  /** \brief Calculate the wind force on a node
+    *  
+    * \param[in] n The node to calculate the gravity
+    * \param[in] t Time.(Not used here)
+    *
+    * \tparam NODE a class that satisfies the Node concept
+    *
+    * \return the wind force of the node
+    * 
+    * The wind force of a  node is calculated to simulate the aggregated
+    * effect of the wind force on adjacent triangles of the node.
+    */
   template <typename NODE>
   Point operator()(NODE n, double t) {
     double c = 0.00004;
@@ -340,16 +428,41 @@ struct WindForce {
     (void) t;
     return c*dot((w-n.value().velocity),normal)*normal;
   }
-  Point w;
+
+  Point w; ///< The strength and direction of the wind
 };
 
 
-//the air pressure force
+/** 
+ * \struct PressureForce
+ *
+ * \brief Force Function to the air pressure force 
+ */
 template <typename NODE, typename G>
 struct PressureForce
 {
+  /** \brief Constructor Function
+   *  
+   * \param[in] p_out The airpressure outside the sphere
+   * \param[in] c The amout of air inside the sphere
+   * \param[in] graph Pointer to the sphere mesh to calculate air pressure on
+   */
   PressureForce(double p_out, double c, G* graph): P_out(p_out), C(c), g(graph) {}
 
+  /** \brief Calculate the pressure force on a node
+    *  
+    * \param[in] n The node to calculate the gravity
+    * \param[in] t Time.(Not used here)
+    *
+    * \tparam NODE a class that satisfies the Node concept
+    *
+    * \return the pressure force of the node
+    * 
+    * The pressure force of a node is calculated by aggreggating the 
+    * pressure force of the adjacent triangles of the node. The force
+    * on one triangle is: F = (c/V - p_out)*area. V is the volume of 
+    * the sphere, and area is the area of the triangle.
+    */
   Point operator()(NODE n, double t) {
 
     //if n.index()==0, update the volume, center and normal vector,
@@ -387,36 +500,80 @@ struct PressureForce
       force += P_diff*(*it).area()*(*it).value().n/3;
     }
     (void) t;
-    //std::cout<<force<<std::endl;
     return force;
   }
 private:
-  double P_out; //the pressure outside the ball
-  double C;  //nRT
-  double V;  //the volumn of the ball
-  double P_diff; //P_inside-P_out
-  Point center; //The point in the center of the ball
-  G* g;
+  double P_out; ///< the pressure outside the ball
+  double C;  ///< nRT
+  double V;  ///< the volume of the ball
+  double P_diff; ///< P_inside-P_out
+  Point center; ///< The point in the center of the ball
+  G* g; ///< Pointer to the sphere
 };
 
 //Force function which represents the combined effects of F1 and F2
+/** 
+ * \struct CombinedForce
+ *
+ * \brief Constraint that combines two forces
+ * 
+ * This struct implements a force that combines the  
+ * effects of two forces.
+ * 
+ * \tparam F1 A class that satisfies the force concept.
+ * \tparam F2 A class that satisfies the force concept.
+ */
 template<typename F1,typename F2>
 struct CombinedForce{
-  F1 force1;
-  F2 force2;
+  F1 force1; ///< The first force
+  F2 force2; ///< The second force
+
+  /** \brief Constructor Function
+   *  
+   * \param[in] c1 The first force
+   * \param[in] c2 The first force
+   */
   CombinedForce(F1 f1=F1(), F2 f2=F2()):force1(f1), force2(f2){}
+
+  /** \brief Get the force on the node with the effect of two force
+    *  
+    * \param[in] n The node to calculate the gravity
+    * \param[in] t Time.(Not used here)
+    *
+    * \tparam NODE a class that satisfies the Node concept
+    *
+    * \return the combined force of the node
+    *
+    * This function calculates the force on a node. The force is 
+    * the same calculating two forces separately and adding them together
+    */
   template <typename NODE>
   Point operator() (NODE n, double t){
     return (force1(n, t)+force2(n, t));
   }
 };
 
-//Combine the effects of two forces
+
+/** \brief Make a combined force from two forces
+  *  
+  * \param[in] f1 The first force
+  * \param[in] f2 The second force
+  *
+  * \return A force that acts as the combined effect of two forces.
+  */
 template<typename F1,typename F2>
 CombinedForce<F1, F2> make_combined_force(F1 f1 = F1(), F2 f2 = F2()){
   return CombinedForce<F1, F2>(f1, f2);
 }
-//combine the effects of three forces
+
+/** \brief Make a combined force from three forces
+  *  
+  * \param[in] f1 The first force
+  * \param[in] f2 The second force
+  * \param[in] f3 The third force
+  *
+  * \return A force that acts as the combined effect of three forces.
+  */
 template<typename F1, typename F2, typename F3>
 CombinedForce<CombinedForce<F1, F2>, F3> make_combined_force(F1 force1, F2 force2, F3 force3){
   return make_combined_force(make_combined_force(force1, force2), force3);
