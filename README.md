@@ -81,5 +81,11 @@ Contact us. Tian Lan tianlan@g.harvard.edu  Xide Xia xidexia@g.harvard.edu
 ####3. Bouncing Ball  
 ![](demo/fixed.gif)
 
-####3. A ball in a corner with wind  
+####4. A ball in a corner with wind  
 ![](demo/box.gif)
+
+####5. Collision between two spheres
+![](demo/collision.gif)
+
+####6. Collision between a sphere and water
+![](demo/collisionwater.gif)
