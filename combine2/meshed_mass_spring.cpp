@@ -376,18 +376,18 @@ filter_iterator<Pred,Iter,G> make_filtered(const Iter& it, const Iter& end,
 struct MyPredicate{
   template<typename G,typename NODE>
   bool operator()(G& g1,std::vector<unsigned> list1,const NODE& n) {
+    if (list1.size()==0)
+      return 1;
     double z0=0;
-   for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
+    for (auto it1 = list1.begin(); it1 != list1.end(); ++it1){
       Node node = g1.node(*it1);
       z0 += node.position().z;
       //if(node.position().z>z0)
       //  z0=node.position().z;
     }
-    if (list1.size()==0)
-      return 1;
     z0/=list1.size();
     //std::cout<< (n.position().z >z0) << std::endl;
-    return ( n.position().z >z0 );
+    return (n.position().z > (z0-0.1));
   }
 };
 
@@ -894,7 +894,7 @@ int main(int argc, char** argv) {
 
     wind_force.w.z = collision2.size() * 10;
     obj_vector[0].Weight = collision2.size() * 100;
-    obj_vector[0].length = collision2.size() * 500;
+    obj_vector[0].length = collision2.size() * 1000;
 
     auto force = make_combined_force(MassSpringForce(), GravityForce(), make_combined_force(pressure_force, damp_force, wind_force));
 
@@ -908,11 +908,11 @@ int main(int argc, char** argv) {
     
     //update with removed nodes
     //update viewer with new positions and new edges
-    viewer.clear();
-    node_map.clear();
-    node_map2.clear();
+    //node_map2.clear();
     auto it_begin = make_filtered(mesh.node_begin(), mesh.node_end(),MyPredicate(),mesh2,collision2);
     auto it_end = make_filtered(mesh.node_end(), mesh.node_end(),MyPredicate(),mesh2,collision2);
+    viewer.clear();
+    node_map.clear();
     viewer.add_nodes(it_begin, it_end, color(color1, color2, color3), node_map);
     viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
     //viewer.add_nodes(mesh.node_begin(), mesh.node_end(), color(color1, color2, color3), node_map);
