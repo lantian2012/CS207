@@ -525,13 +525,13 @@ int main(int argc, char** argv) {
   Pause_listener* pause = new Pause_listener(dt); 
   Speed_listener* speed = new Speed_listener(dt, dt); 
   XYZ_listener<MeshType>* xyz = new XYZ_listener<MeshType>(&mesh);
-  //Color_listener* col = new Color_listener(&color1, &color2, &color3);
+  Color_listener* col = new Color_listener(&color1, &color2, &color3);
   
   //add listener
   viewer.add_listener(pause);
   viewer.add_listener(speed);
   viewer.add_listener(xyz);
-  //viewer.add_listener(col);
+  viewer.add_listener(col);
 
   //Initialize forces
   WindForce wind_force(Point(0,0,0));
