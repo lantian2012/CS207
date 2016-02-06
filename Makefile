@@ -16,6 +16,9 @@ EXEC += mtl_test
 EXEC += poisson
 EXEC += shallow_water
 EXEC += test_water
+EXEC += meshed_mass_spring
+EXEC += meshed_collision
+EXEC += meshed_pond
 
 # Get the shell name to determine the OS
 UNAME := $(shell uname)
