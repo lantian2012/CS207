@@ -38,6 +38,7 @@ class BoundingBox {
       : empty_(false), min_(p1), max_(p1) {
     *this |= p2;
   }
+
   /** Construct a bounding box containing the points in [first, last). */
   template <typename PointIter>
   BoundingBox(PointIter first, PointIter last)

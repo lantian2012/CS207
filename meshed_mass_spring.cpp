@@ -18,6 +18,51 @@
 #include "Point.hpp"
 #include "Meshed_mass_spring.hpp"
 
+ /** 
+ * \struct NodeData
+ *
+ * \brief Custom structure of data to store with Nodes 
+ * 
+ * This struct stores data associated with each node.
+ * Users can store their own data as members, and add
+ * new member functions. However, users should NOT delete
+ * the @a velocity and @a mass defined here. 
+ */
+struct NodeData {
+  Point velocity;  ///< Node velocity
+  double mass;     ///< Node mass
+};
+
+/** 
+ * \struct EdgeData
+ *
+ * \brief Custom structure of data to store with Edges
+ * 
+ * This struct stores data associated with each edge.
+ * Users can store their own data as members, and add
+ * new member functions. However, users should NOT delete
+ * the @a L and @a K defined here. 
+ */
+struct EdgeData{
+  double L;  ///< Edge length
+  double K;  ///< Edge spring constant (stiffness)
+};
+
+/** 
+ * \struct TriData
+ *
+ * \brief Custom structure of data to store with Triangles
+ * 
+ * This struct stores data associated with each triangle.
+ * Users can store their own data as members, and add
+ * new member functions. However, users should NOT delete
+ * the @a n defined here. 
+ */
+struct TriData
+{
+  Point n; ///<the outward surface normal vector of the triangle
+};
+
 typedef Mesh<NodeData, EdgeData, TriData> MeshType;
 typedef typename MeshType::node_type Node;
 typedef typename MeshType::edge_type Edge;

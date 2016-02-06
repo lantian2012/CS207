@@ -4,8 +4,6 @@
 /**
  * @file SDLViewer.hpp
  * Interactive OpenGL Viewer
- *
- * @brief Provides a OpenGL window with some basic interactivity.
  */
 
 #include <iostream>
@@ -16,14 +14,21 @@
 #include <cassert>
 #include <algorithm>
 
-#include <SDL/SDL.h>
-#include <SDL/SDL_opengl.h>
+#include <unistd.h>
 
 #include "GLCamera.hpp"
 #include "Util.hpp"
 #include "Point.hpp"
 #include "Color.hpp"
 
+#include <SDL/SDL.h>
+#if defined(__APPLE__) || defined(MACOSX)
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
+#include <GL/gl.h>
+#include <GL/glu.h>
+#endif
 
 namespace CS207 {
 
@@ -56,6 +61,14 @@ struct DefaultPosition {
   }
 };
 
+
+// the SDL Listener abstract function 
+struct SDL_Listener {
+  virtual void handle(SDL_Event e) { (void) e;};
+  friend class SDLViewer;
+};
+
+
 /** SDLViewer class to view points and edges
  */
 class SDLViewer {
@@ -84,6 +97,12 @@ class SDLViewer {
 
   // Edges (index pairs)
   std::vector<unsigned> edges_;
+  
+  // Triangles (index triples)
+  std::vector<unsigned> triangles_;
+  
+  // Listeners
+  std::vector<SDL_Listener*> listeners_;
 
   // Currently displayed label
   std::string label_;
@@ -129,10 +148,6 @@ class SDLViewer {
     SDL_Quit();
   }
 
-  /** Disable copy and assignment of SDLViewers */
-  SDLViewer(const SDLViewer&) = delete;
-  void operator=(const SDLViewer&) = delete;
-
   /** Launch a new SDL window. */
   void launch() {
     if (event_thread_ == nullptr) {
@@ -162,6 +177,7 @@ class SDLViewer {
       coords_.clear();
       colors_.clear();
       edges_.clear();
+      triangles_.clear();
       label_.clear();
     }
     request_render();
@@ -171,9 +187,8 @@ class SDLViewer {
    * @pre The G type and @a g object must have the following properties:
    *   <ol><li>G::size_type and G::node_type are types.</li>
    *       <li>G::size_type g.num_nodes() returns the number of nodes.</li>
-   *	     <li>G::node_type g.node(G::size_type i) returns a node object.</li>
+   *     <li>G::node_type g.node(G::size_type i) returns a node object.</li>
    *       <li>Point g.node(i).position() returns the position of node i.</li>
-   *   </ol>
    *
    * This function clears all edges, drawing only nodes. All nodes are drawn
    * as white. */
@@ -182,20 +197,17 @@ class SDLViewer {
     // Lock for data update
     { safe_lock mutex(this);
 
-      // Convenience aliases
-      using size_type = typename G::size_type;
-      using node_type = typename G::node_type;
-
-      // Clear the data
       coords_.clear();
       edges_.clear();
+      triangles_.clear();
+      Point center;
 
-      // Insert the nodes
-      size_type num_nodes = g.num_nodes();
-      for (size_type i = 0; i < num_nodes; ++i)
-        coords_.push_back(g.node(i).position());
+      for (typename G::size_type i = 0; i < g.num_nodes(); ++i) {
+        Point p = g.node(i).position();
+        coords_.push_back(p);
+        center += p;
+      }
 
-      // Set all nodes to be white
       colors_ = std::vector<Color>(coords_.size(), Color(1,1,1));
     }
 
@@ -210,7 +222,7 @@ class SDLViewer {
    *       <li>G::size_type g.num_edges() returns the number of edges.</li>
    *       <li>G::edge_type g.edge(G::size_type i) returns an edge object.</li>
    *       <li>G::node_type g.edge(i).node1() and node2() return node objs.</li>
-   *   </ol>
+   *       <li>G::triangle_type g.triangle(i).node(1) and node(2) and node(3) return node objs.</li>
    *
    * This function draws both nodes and edges. All nodes are drawn as
    * white. */
@@ -219,30 +231,22 @@ class SDLViewer {
     // Lock for data update
     { safe_lock mutex(this);
 
-      // Convenience aliases
-      using size_type = typename G::size_type;
-      using node_type = typename G::node_type;
-      using edge_type = typename G::edge_type;
-
-      // Clear the data
       coords_.clear();
       edges_.clear();
-      std::map<size_type, unsigned> nodemap;
+      triangles_.clear();
+      Point center;
+      std::map<typename G::size_type, unsigned> nodemap;
 
-      // Insert the nodes and record mapping
-      size_type num_nodes = g.num_nodes();
-      for (size_type i = 0; i < num_nodes; ++i) {
-        node_type n = g.node(i);
+      for (typename G::size_type i = 0; i < g.num_nodes(); ++i) {
+        typename G::node_type n = g.node(i);
         nodemap[n.index()] = coords_.size();
-        coords_.push_back(n.position());
+        Point p = n.position();
+        coords_.push_back(p);
+        center += p;
       }
 
-      // Set all nodes to be white
-      colors_ = std::vector<Color>(coords_.size(), Color(1,1,1));
-      // Insert edges accoring to our mapping
-      size_type num_edges = g.num_edges();
-      for (size_type i = 0; i < num_edges; ++i) {
-        edge_type e = g.edge(i);
+      for (typename G::size_type i = 0; i < g.num_edges(); ++i) {
+        typename G::edge_type e = g.edge(i);
         auto it1 = nodemap.find(e.node1().index());
         auto it2 = nodemap.find(e.node2().index());
         if (it1 != nodemap.end() && it2 != nodemap.end()) {
@@ -250,6 +254,20 @@ class SDLViewer {
           edges_.push_back(it2->second);
         }
       }
+      
+      for (typename G::size_type i = 0; i < g.num_triangles(); ++i) {
+        typename G::triangle_type t = g.triangle(i);
+        auto it1 = nodemap.find(t.node(1).index());
+        auto it2 = nodemap.find(t.node(2).index());
+        auto it3 = nodemap.find(t.node(3).index());
+        if (it1 != nodemap.end() && it2 != nodemap.end() && it3 != nodemap.end()) {
+          triangles_.push_back(it1->second);
+          triangles_.push_back(it2->second);
+          triangles_.push_back(it3->second);
+        }
+      }
+
+      colors_ = std::vector<Color>(coords_.size(), Color(1,1,1));
     }
 
     request_render();
@@ -353,6 +371,69 @@ class SDLViewer {
 
     request_render();
   }
+  
+  /** Add the triangles in the range [first, last) to the display.
+   * @param[in] node_map Tracks node identities.
+   *
+   * The InputIterator forward iterator must return triangle objects. Given an
+   * triangle object t, the calls t.node(1),t.node(2),t.node(3) must return its
+   * endpoints.
+   *
+   * Triangles whose endpoints weren't previously added to the node_map by
+   * add_nodes() are ignored. */
+  template <typename InputIterator, typename Map>
+  void add_triangles(InputIterator first, InputIterator last, const Map& node_map) {
+    // Lock for data update
+    { safe_lock mutex(this);
+
+      for (; first != last; ++first) {
+        auto triangle = *first;
+        auto n1 = node_map.find(triangle.node1());
+        auto n2 = node_map.find(triangle.node2());
+        auto n3 = node_map.find(triangle.node3());
+        if (n1 != node_map.end() && n2 != node_map.end() && n3 != node_map.end()) {
+          triangles_.push_back(n1->second);
+          triangles_.push_back(n2->second);
+          triangles_.push_back(n3->second);
+        }
+      }
+    }
+
+    request_render();
+  }
+  
+  /** Add listener*/
+  void add_listener ( SDL_Listener* listener ) { listeners_.push_back(listener); }
+  
+  
+  /** Project screen coordinates into a line in model space
+   * using the current OpenGL view.
+   *
+   * @param x,y Input screen coordinates.
+   * @returns Two points representing a line through model space.
+   *          The first point is closest to the camera,
+   *          the second point is furthest from the camera.
+   */
+  std::pair<Point,Point> unProject(int x, int y)
+  {
+    GLdouble modelMatrix[16];
+    glGetDoublev(GL_MODELVIEW_MATRIX,modelMatrix);
+    GLdouble projMatrix[16];
+    glGetDoublev(GL_PROJECTION_MATRIX,projMatrix);
+    int viewport[4];
+    glGetIntegerv(GL_VIEWPORT,viewport);
+
+    Point backPoint, frontPoint;
+    gluUnProject(x, window_height_ - y, 1.0,
+                 modelMatrix, projMatrix, viewport,
+                 &backPoint.x, &backPoint.y, &backPoint.z);
+    gluUnProject(x, window_height_ - y, 0.0,
+                 modelMatrix, projMatrix, viewport,
+                 &frontPoint.x, &frontPoint.y, &frontPoint.z);
+
+    return {frontPoint, backPoint};
+  }
+  
 
   /** Set a string label to display "green LCD" style. */
   void set_label(const std::string& str) {
@@ -386,7 +467,7 @@ class SDLViewer {
     { safe_lock mutex(this);
 
       // Sum the points in coords_
-      Point c = std::accumulate(coords_.begin(), coords_.end(), Point(0));
+      Point c = std::accumulate(coords_.begin(), coords_.end(), Point());
       // Set the new view point
       camera_.view_point(c / coords_.size());
     }
@@ -395,6 +476,20 @@ class SDLViewer {
     request_render();
   }
 
+  /** XY Plane view.
+   *
+   * Attempts to select a suitable OpenGL view for a 2D plane 
+   */
+  void xyplane_view() {
+    { safe_lock mutex(this);
+      center_view();
+      camera_.rotate_x(1.57079632679);
+    }
+
+    // Queue for rendering
+    request_render();
+  }
+  
   /** Request that the screen update shortly. */
   void request_render() {
     if (!render_requested_) {
@@ -417,6 +512,8 @@ class SDLViewer {
   void init() {
      // Set X11 driver
     std::string driver = "SDL_VIDEODRIVER=x11";
+    // Set Quartz driver (interactivity broken?)
+    //std::string driver = "SDL_VIDEODRIVER=x11";
     SDL_putenv((char*) driver.c_str());
 
     // Initialize SDL
@@ -517,7 +614,6 @@ class SDLViewer {
           camera_.zoom(1.25);
         if (event.button.button == SDL_BUTTON_WHEELDOWN)
           camera_.zoom(0.8);
-
         request_render();
       } break;
 
@@ -544,6 +640,8 @@ class SDLViewer {
         exit(0);
       } break;
     }
+    for(auto l = listeners_.begin(); l != listeners_.end(); ++l )
+      (*l)->handle(event);
   }
 
   /** Print any outstanding OpenGL error to std::cerr. */
@@ -670,13 +768,18 @@ class SDLViewer {
 
     // Draw the points
     glPointSize(1.5);
-    glDrawArrays(GL_POINTS, 0, coords_.size());
+    if (triangles_.size() == 0)
+      glDrawArrays(GL_POINTS, 0, coords_.size());
 
     // Draw the lines
     glLineWidth(1);
     glDrawElements(GL_LINES, edges_.size(),
                    gltype<unsigned>::value, edges_.data());
 
+    // Draw the triangles
+    glDrawElements(GL_TRIANGLES, triangles_.size(),
+                   gltype<unsigned>::value, triangles_.data());                   
+                   
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
 
