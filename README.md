@@ -8,9 +8,21 @@ Tian Lan, Xide Xia
 
 In our project, we used the Mesh class to implement the mass-spring model. By using a triangular Mesh instead, we implemented forces applied to the surfaces (triangles) of the mesh. We are able to add the wind force and the air pressure force. The wind force applies to all mesh objects. It would drive a boat to sail, cause waves in the shallow water models, and blow away balls in desired directions. The air pressure applies to all convex enclosed meshes. It could fill a ball with air, and make the ball stable during collision. So you could bounce the ball on a wall, against the surface of water, and even have two balls that collide with each other.
 
-###Sample
+### Files
 
-Take a look at meshed_mass_spring.cpp for a cool piece of sample code. We use the wind force, the air pressure force, and all forces in the old mass spring. You can find that the code for the old forces does not change at all.
+1. Header Files
+ - `Graph.hpp`: Graph data structure.
+ - `Mesh.hpp`: Mesh data structure. Mehs is built on Graph. 
+ - `Meshed_mass_spring.hpp`: Force and constraint.
+ - `Other`: Headers implemented by other teams.
+
+ 2. CPP Files
+  - `meshed_mass_spring.cpp`: Demo code to use our implemntation of mesh, force and contraint. 
+  - `meshed_collision.cpp`: Demo code to combine our implementation with a collision detector.
+
+### Demo
+
+Take a look at `meshed_mass_spring.cpp` for a cool piece of sample code. We use the wind force, the air pressure force, and all forces in the old mass spring. You can find that the code for the old forces does not change at all.
 
 ### Run the code 
 
