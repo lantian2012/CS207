@@ -12,7 +12,7 @@ In our project, we used the Mesh class to implement the mass-spring model. By us
 
 1. Header Files
  - `Graph.hpp`: Graph data structure.
- - `Mesh.hpp`: Mesh data structure. Mehs is built on Graph. 
+ - `Mesh.hpp`: Mesh data structure. Mesh is built on Graph.
  - `Meshed_mass_spring.hpp`: Force and constraint.
  - `Other`: Headers implemented by other teams.
 
