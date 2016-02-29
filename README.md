@@ -16,6 +16,7 @@ In our project, we used the Mesh class to implement the mass-spring model. By us
  - `Meshed_mass_spring.hpp`: Force and constraint.
  - `Other`: Headers implemented by other teams.
 
+
 2. CPP Files
  - `meshed_mass_spring.cpp`: Demo code to use our implemntation of mesh, force and contraint. 
  - `meshed_collision.cpp`: Demo code to combine our implementation with a collision detector.
