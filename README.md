@@ -12,6 +12,15 @@ In our project, we used the Mesh class to implement the mass-spring model. By us
 
 Take a look at meshed_mass_spring.cpp for a cool piece of sample code. We use the wind force, the air pressure force, and all forces in the old mass spring. You can find that the code for the old forces does not change at all.
 
+### Run the code 
+
+```
+compile: make meshed_mass_sping
+  run: ./meshed_mass_spring data/XXX.nodes data/XXX.tris
+```
+
+For bouncing ball simulation, we suggest using sphere200.nodes and sphere200.tris for good visual effects.
+
 ###Using the code
 
 Our code design is very easy to use, and it will be compatible with your old mass spring code if you change your graph to a mesh.
